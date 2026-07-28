@@ -64,6 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['plan_id'])) {
     $planId    = (int) $_POST['plan_id'];
     $payRef    = trim($_POST['payment_ref'] ?? '');
     $gcashNum  = trim($_POST['gcash_number'] ?? '');
+    $paymentMethod = trim($_POST['payment_method'] ?? 'gcash');
+    $bankName      = trim($_POST['selected_bank'] ?? '');
     $uploadDir = '../uploads/gcash/';
 
     if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -94,10 +96,10 @@ if (!in_array($mimeType, $allowedTypes)) {
     $conn->query("UPDATE shop_subscriptions SET status='rejected' WHERE shop_id=$userId AND status='pending'");
 
     $stmt = $conn->prepare("
-        INSERT INTO shop_subscriptions (shop_id, plan_id, status, payment_ref, gcash_screenshot, gcash_number)
-        VALUES (?, ?, 'pending', ?, ?, ?)
-    ");
-    $stmt->bind_param("iisss", $userId, $planId, $payRef, $screenshotPath, $gcashNum);
+      INSERT INTO shop_subscriptions (shop_id, plan_id, status, payment_ref, gcash_screenshot, gcash_number, payment_method, bank_name)
+      VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
+  ");
+  $stmt->bind_param("iissss s", $userId, $planId, $payRef, $screenshotPath, $gcashNum, $paymentMethod, $bankName);
     if ($stmt->execute()) {
         $msg     = 'Subscription request submitted! Wait for admin approval.';
         $msgType = 'success';
@@ -199,8 +201,8 @@ if ($currentSub) {
       transition: all 0.25s ease; text-align: center;
     }
     .plan-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.10); border-color: #f59e0b; }
+    .plan-card.popular { border-color: #cbd5e1; }   /* neutral/gray na lang, ang "⭐ Most Popular" tag ra ang badge indicator */
     .plan-card.selected { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.15); }
-    .plan-card.popular { border-color: #f59e0b; }
 
     .plan-popular-tag {
       position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
@@ -448,7 +450,7 @@ if ($currentSub) {
       </div>
       <?php elseif ($currentSub && $currentSub['status'] === 'expired'): ?>
       <div class="sub-status-banner banner-expired">
-        <div class="banner-icon">⚠️</div>
+        <div class="banner-icon"><img src="../assets/icons/danger.svg" alt="" width="26 "height="26" /></div>
         <div class="banner-info">
           <div class="banner-title">Subscription Expired</div>
           <div class="banner-sub">Your <?php echo htmlspecialchars($currentSub['plan_name']); ?> plan expired on <?php echo date('F j, Y', strtotime($currentSub['end_date'])); ?>. Renew to continue using the platform.</div>
@@ -490,7 +492,11 @@ if ($currentSub) {
       <?php else: ?>
       <!-- ── PLAN SELECTION ── -->
       <h2 style="font-size:1rem;font-weight:800;color:#0f172a;margin:0 0 .85rem;font-family:'Outfit',sans-serif;">
-        <?php echo $isActive ? '🔄 Renew / Upgrade Plan' : '📦 Choose a Plan'; ?>
+        <?php if ($isActive): ?>
+    <img src="../assets/icons/renew.svg" alt="" width="16" height="16" style="vertical-align:middle;margin-right:4px;" /> Renew / Upgrade Plan
+    <?php else: ?>
+  <img src="../assets/icons/lock.svg" alt="" width="16" height="16" style="vertical-align:middle;margin-right:4px;" /> Choose a Plan
+  <?php endif; ?>
       </h2>
 
       <form method="POST" enctype="multipart/form-data" id="subForm">
@@ -515,60 +521,98 @@ if ($currentSub) {
 
         <!-- ── PAYMENT FORM ── -->
         <div class="payment-section" id="paymentSection">
-          <div class="section-label">💳 GCash Payment Details</div>
+      <div class="section-label">💳 Payment Details</div>
 
-          <div class="gcash-info-box">
-            <div class="gcash-logo">💚</div>
-            <div class="gcash-details">
-              <div class="gcash-number">0917-123-4567</div>
-              <div class="gcash-name">Fix It Davao Admin</div>
-            </div>
-            <div class="gcash-amount" id="gcashAmount">₱0.00</div>
-          </div>
+      <!-- Payment method tabs -->
+      <div class="payment-method-tabs" style="display:flex;gap:8px;margin-bottom:1.2rem;">
+        <button type="button" class="pm-tab active" data-method="gcash" onclick="switchPaymentMethod('gcash', this)"
+          style="flex:1;padding:10px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#d97706;font-weight:700;font-size:.85rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;">
+          💚 GCash
+        </button>
+        <button type="button" class="pm-tab" data-method="bank" onclick="switchPaymentMethod('bank', this)"
+          style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:10px;background:white;color:#64748b;font-weight:700;font-size:.85rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;">
+          🏦 Bank Transfer
+        </button>
+      </div>
+      <input type="hidden" name="payment_method" id="paymentMethod" value="gcash" />
 
-          <p style="font-size:.82rem;color:#64748b;margin:0 0 1rem;line-height:1.6;">
-            Send the exact amount to the GCash number above, then fill in the details below and upload your screenshot as proof of payment.
-          </p>
-
-          <div class="form-group">
-            <label>Your GCash Number *</label>
-            <input type="tel" name="gcash_number" placeholder="e.g., 0917-123-4567" required />
-          </div>
-          <div class="form-group">
-            <label>GCash Reference Number *</label>
-            <input type="text" name="payment_ref" placeholder="e.g., 1234567890" required />
-          </div>
-          <div class="form-group">
-            <label>Upload GCash Screenshot *</label>
-            <div class="upload-area" id="uploadArea">
-              <input type="file" name="gcash_screenshot" accept="image/*" id="screenshotInput" onchange="previewScreenshot(this)" required />
-              <div class="upload-icon">📸</div>
-              <p>Click to upload your GCash payment screenshot</p>
-              <img id="screenshotPreview" class="upload-preview" alt="Screenshot preview" />
-            </div>
-          </div>
-
-          <button type="submit" class="btn-submit-sub" id="submitBtn">
-            🚀 Submit Subscription Request
-          </button>
-          <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:8px;">
-            Admin will verify your payment within 24 hours.
-          </p>
+      <!-- GCash info box -->
+      <div class="gcash-info-box" id="gcashInfoBox">
+        <div class="gcash-logo">💚</div>
+        <div class="gcash-details">
+          <div class="gcash-number">0917-123-4567</div>
+          <div class="gcash-name">Fix It Davao Admin</div>
         </div>
+        <div class="gcash-amount" id="gcashAmount">₱0.00</div>
+      </div>
+
+<!-- Bank info box (hidden by default) -->
+<div class="gcash-info-box" id="bankInfoBox" style="display:none;flex-direction:column;align-items:stretch;">
+  <div class="form-group" style="margin-bottom:.8rem;">
+    <label>Select Bank *</label>
+    <select id="bankSelect" onchange="updateBankDetails(this.value)"
+      style="width:100%;padding:10px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.85rem;font-family:'Outfit',sans-serif;outline:none;box-sizing:border-box;cursor:pointer;">
+      <option value="bdo">BDO</option>
+      <option value="bpi">BPI</option>
+      <option value="metrobank">Metrobank</option>
+      <option value="unionbank">UnionBank</option>
+      <option value="landbank">Landbank</option>
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="gcash-logo">🏦</div>
+    <div class="gcash-details">
+      <div class="gcash-number" id="bankAccountNumber" style="font-size:1rem;">BDO — 001234567890</div>
+      <div class="gcash-name" id="bankAccountName">Fix It Davao Corp.</div>
+    </div>
+    <div class="gcash-amount" id="bankAmount">₱0.00</div>
+  </div>
+</div>
+<input type="hidden" name="selected_bank" id="selectedBank" value="bdo" />
+
+      <p style="font-size:.82rem;color:#64748b;margin:0 0 1rem;line-height:1.6;" id="paymentInstructions">
+        Send the exact amount to the GCash number above, then fill in the details below and upload your screenshot as proof of payment.
+      </p>
+
+      <div class="form-group">
+        <label id="senderLabel">Your GCash Number *</label>
+        <input type="tel" name="gcash_number" id="senderInput" placeholder="e.g., 0917-123-4567" required />
+      </div>
+      <div class="form-group">
+        <label id="refLabel">GCash Reference Number *</label>
+        <input type="text" name="payment_ref" id="refInput" placeholder="e.g., 1234567890" required />
+      </div>
+      <div class="form-group">
+        <label id="screenshotLabel">Upload GCash Screenshot *</label>
+        <div class="upload-area" id="uploadArea">
+          <input type="file" name="gcash_screenshot" accept="image/*" id="screenshotInput" onchange="previewScreenshot(this)" required />
+          <div class="upload-icon">📸</div>
+          <p id="uploadHint">Click to upload your GCash payment screenshot</p>
+          <img id="screenshotPreview" class="upload-preview" alt="Screenshot preview" />
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit-sub" id="submitBtn">
+        🚀 Submit Subscription Request
+      </button>
+      <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:8px;">
+        Admin will verify your payment within 24 hours.
+      </p>
+    </div>
       </form>
       <?php endif; ?>
 
       <!-- ── SUBSCRIPTION HISTORY ── -->
       <?php
       $connH = new mysqli("localhost", "root", "", "fixitdavao");
-      $stmtH = $connH->prepare("
-          SELECT ss.*, sp.name AS plan_name, sp.price
-          FROM shop_subscriptions ss
-          JOIN subscription_plans sp ON ss.plan_id = sp.id
-          WHERE ss.shop_id = ?
-          ORDER BY ss.created_at DESC
-          LIMIT 10
-      ");
+        $stmtH = $connH->prepare("
+      SELECT ss.*, sp.name AS plan_name, sp.price
+      FROM shop_subscriptions ss
+      JOIN subscription_plans sp ON ss.plan_id = sp.id
+      WHERE ss.shop_id = ?
+      ORDER BY ss.created_at DESC
+      LIMIT 10
+  ");
       $stmtH->bind_param("i", $userId);
       $stmtH->execute();
       $history = $stmtH->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -584,6 +628,7 @@ if ($currentSub) {
               <tr>
                 <th>Plan</th>
                 <th>Amount</th>
+                <th>Method</th>
                 <th>Start</th>
                 <th>End</th>
                 <th>Status</th>
@@ -591,16 +636,21 @@ if ($currentSub) {
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($history as $h): ?>
-              <tr>
-                <td><strong><?php echo htmlspecialchars($h['plan_name']); ?></strong></td>
-                <td>₱<?php echo number_format($h['price'], 2); ?></td>
-                <td><?php echo $h['start_date'] ? date('M j, Y', strtotime($h['start_date'])) : '—'; ?></td>
-                <td><?php echo $h['end_date']   ? date('M j, Y', strtotime($h['end_date']))   : '—'; ?></td>
-                <td><span class="status-pill pill-<?php echo $h['status']; ?>"><?php echo ucfirst($h['status']); ?></span></td>
-                <td style="font-family:'Space Mono',monospace;font-size:.75rem;"><?php echo htmlspecialchars($h['payment_ref'] ?: '—'); ?></td>
-              </tr>
-              <?php endforeach; ?>
+                          <?php foreach ($history as $h): ?>
+            <tr>
+              <td><strong><?php echo htmlspecialchars($h['plan_name']); ?></strong></td>
+              <td>₱<?php echo number_format($h['price'], 2); ?></td>
+              <td>
+                <?php echo $h['payment_method'] === 'bank'
+                  ? '🏦 ' . strtoupper($h['bank_name'] ?: 'Bank')
+                  : '💚 GCash'; ?>
+              </td>
+              <td><?php echo $h['start_date'] ? date('M j, Y', strtotime($h['start_date'])) : '—'; ?></td>
+              <td><?php echo $h['end_date']   ? date('M j, Y', strtotime($h['end_date']))   : '—'; ?></td>
+              <td><span class="status-pill pill-<?php echo $h['status']; ?>"><?php echo ucfirst($h['status']); ?></span></td>
+              <td style="font-family:'Space Mono',monospace;font-size:.75rem;"><?php echo htmlspecialchars($h['payment_ref'] ?: '—'); ?></td>
+            </tr>
+            <?php endforeach; ?>
             </tbody>
           </table>
         </div>
@@ -636,24 +686,77 @@ if ($currentSub) {
     }
 
     // ── Plan selection ──
-    let selectedPlanId = null;
+let selectedPlanId = null;
 
-    function selectPlan(id, price, name) {
-      selectedPlanId = id;
-      document.getElementById('selectedPlanId').value = id;
+function selectPlan(id, price, name) {
+  selectedPlanId = id;
+  document.getElementById('selectedPlanId').value = id;
 
-      // Highlight selected card
-      document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
-      event.currentTarget.classList.add('selected');
+  // Highlight selected card
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
 
-      // Show payment section + update amount
-      document.getElementById('paymentSection').classList.add('show');
-      document.getElementById('gcashAmount').textContent = '₱' + parseFloat(price).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+  // Show payment section + update amount
+  document.getElementById('paymentSection').classList.add('show');
+  document.getElementById('gcashAmount').textContent = '₱' + parseFloat(price).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+  document.getElementById('bankAmount').textContent  = '₱' + parseFloat(price).toLocaleString('en-PH', { minimumFractionDigits: 2 }); // ← dungag pud ni, wa pa diay ni napatch
 
-      // Scroll to payment
-      setTimeout(() => {
-        document.getElementById('paymentSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+  // Scroll to payment
+  setTimeout(() => {
+    document.getElementById('paymentSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+const BANK_ACCOUNTS = {
+  bdo:        { number: '001234567890', name: 'Fix It Davao Corp.', label: 'BDO' },
+  bpi:        { number: '009876543210', name: 'Fix It Davao Corp.', label: 'BPI' },
+  metrobank:  { number: '005566778899', name: 'Fix It Davao Corp.', label: 'Metrobank' },
+  unionbank:  { number: '001122334455', name: 'Fix It Davao Corp.', label: 'UnionBank' },
+  landbank:   { number: '009988776655', name: 'Fix It Davao Corp.', label: 'Landbank' },
+};
+
+function updateBankDetails(bankKey) {
+  const bank = BANK_ACCOUNTS[bankKey];
+  if (!bank) return;
+  document.getElementById('bankAccountNumber').textContent = `${bank.label} — ${bank.number}`;
+  document.getElementById('bankAccountName').textContent   = bank.name;
+  document.getElementById('selectedBank').value = bankKey;
+}
+// ── Payment method toggle ── (separate na siya nga function, dili na sulod sa selectPlan)
+function switchPaymentMethod(method, btn) {
+  document.querySelectorAll('.pm-tab').forEach(t => {
+    t.classList.remove('active');
+    t.style.borderColor = '#e2e8f0';
+    t.style.background = 'white';
+    t.style.color = '#64748b';
+  });
+  btn.classList.add('active');
+  btn.style.borderColor = '#f59e0b';
+  btn.style.background = '#fffbeb';
+  btn.style.color = '#d97706';
+
+  document.getElementById('paymentMethod').value = method;
+  document.getElementById('gcashInfoBox').style.display = method === 'gcash' ? 'flex' : 'none';
+  document.getElementById('bankInfoBox').style.display  = method === 'bank'  ? 'flex' : 'none';
+
+   if (method === 'bank') {
+    updateBankDetails(document.getElementById('bankSelect').value);
+  }
+
+  const isBank = method === 'bank';
+  document.getElementById('paymentInstructions').textContent = isBank
+    ? 'Transfer the exact amount to the bank account above, then fill in the details below and upload your deposit/transfer receipt as proof of payment.'
+    : 'Send the exact amount to the GCash number above, then fill in the details below and upload your screenshot as proof of payment.';
+
+  document.getElementById('senderLabel').textContent = isBank ? 'Your Bank Account Name *' : 'Your GCash Number *';
+  document.getElementById('senderInput').placeholder  = isBank ? 'e.g., Juan Dela Cruz' : 'e.g., 0917-123-4567';
+  document.getElementById('senderInput').type         = isBank ? 'text' : 'tel';
+
+  document.getElementById('refLabel').textContent = isBank ? 'Bank Transaction Reference *' : 'GCash Reference Number *';
+  document.getElementById('refInput').placeholder  = isBank ? 'e.g., TXN-20260729-001' : 'e.g., 1234567890';
+
+  document.getElementById('screenshotLabel').textContent = isBank ? 'Upload Deposit/Transfer Receipt *' : 'Upload GCash Screenshot *';
+  document.getElementById('uploadHint').textContent       = isBank ? 'Click to upload your bank receipt' : 'Click to upload your GCash payment screenshot';
     }
 
     // ── Screenshot preview ──

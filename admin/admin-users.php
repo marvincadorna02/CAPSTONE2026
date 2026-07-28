@@ -427,11 +427,19 @@ function updateStats(users) {
         filteredUsers = base; renderTable();
       }
 
-      // ── Helper: real logo for repairshops, colored initials for everyone else ──
-      function userAvatarUrl(role, name, logoUrl) {
-        if (role === "repairshop" && logoUrl) return logoUrl;
-        const color = role === "admin" ? "ef4444" : role === "repairshop" ? "f59e0b" : "3b82f6";
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=64`;
+      // ── Helper: profile pic (any role) > shop logo > colored initials ──
+      function userAvatarUrl(role, name, logoUrl, profilePic) {   // ← gidungag ang 4th param
+      if (profilePic) return profilePic;
+      if (role === "repairshop" && logoUrl) return logoUrl;
+      const color = role === "admin" ? "ef4444" : role === "repairshop" ? "f59e0b" : "3b82f6";
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=64`;
+      }
+
+      // ── Helper: 3 months = inactive threshold ── ← DUNGAG DIRI
+      function isInactive(lastLogin) {
+      if (!lastLogin) return true;
+      const monthsAgo = (Date.now() - new Date(lastLogin)) / (1000 * 60 * 60 * 24 * 30);
+      return monthsAgo >= 3;
       }
 
       function renderTable() {
@@ -445,7 +453,7 @@ function updateStats(users) {
         const start = (currentPage-1)*rowsPerPage;
         const page  = filteredUsers.slice(start, start+rowsPerPage);
         tbody.innerHTML = page.map(u => {
-          const avatar      = userAvatarUrl(u.role, u.name, u.logo_url); // ← FIXED
+          const avatar = userAvatarUrl(u.role, u.name, u.logo_url, u.profile_picture); // ← added profile_picture
           const joinDate    = new Date(u.created_at).toLocaleDateString("en-PH",{year:"numeric",month:"short",day:"numeric"});
           const roleBadge   = u.role==="admin"?"admin-badge":u.role==="repairshop"?"shop-badge":"customer-badge";
           const roleLabel   = u.role==="repairshop"?"Shop Owner":u.role.charAt(0).toUpperCase()+u.role.slice(1);
@@ -531,7 +539,7 @@ function updateStats(users) {
 
       function viewUser(id) { alert(`View user ID: ${id}`); }
       function editUser(id) { alert(`Edit user ID: ${id}`); }
-      function escHtml(str) { return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+      function escHtml(str) { return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 
       loadUsers();
       setInterval(loadUsers, 30000);

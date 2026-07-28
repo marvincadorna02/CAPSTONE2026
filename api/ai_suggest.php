@@ -10,7 +10,7 @@ $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
     session_destroy();
-    header("Location: ../login.php?timeout=1");
+    header("../login.php?timeout=1");
     exit();
 }
 $_SESSION['last_activity'] = time();
@@ -21,7 +21,7 @@ $_SESSION['last_activity'] = time();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // --- CONFIG ---
-    define('GROQ_API_KEY', getenv('GROQ_API_KEY') ?: 'PASTE_YOUR_KEY_HERE_LOCALLY_ONLY');
+    define('GROQ_API_KEY', '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');
     define('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions');
     define('GROQ_MODEL', 'llama-3.3-70b-versatile'); // fast & free
 

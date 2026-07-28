@@ -38,11 +38,12 @@ function addColumnIfMissing($conn, $table, $column, $definition) {
 addColumnIfMissing($conn, 'users', 'status',          "ENUM('active','suspended') NOT NULL DEFAULT 'active'");
 addColumnIfMissing($conn, 'users', 'suspend_reason',  "VARCHAR(255) DEFAULT NULL");
 addColumnIfMissing($conn, 'users', 'approval_status', "ENUM('pending','approved','rejected') NOT NULL DEFAULT 'approved'");
-addColumnIfMissing($conn, 'users', 'logo_url',        "VARCHAR(255) DEFAULT NULL"); // ← ADDED
+addColumnIfMissing($conn, 'users', 'logo_url',        "VARCHAR(255) DEFAULT NULL");
+addColumnIfMissing($conn, 'users', 'last_login',      "DATETIME DEFAULT NULL"); // ← ADDED for inactivity tracking
 
 // Customers always show. Repairshops only show if approved.
 $result = $conn->query("
-    SELECT id, name, email, role, status, suspend_reason, logo_url, created_at
+    SELECT id, name, email, role, status, suspend_reason, logo_url, profile_picture, last_login, created_at
     FROM users
     WHERE role = 'customer'
        OR (role = 'repairshop' AND approval_status = 'approved')
@@ -55,10 +56,11 @@ $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : '
 
 $users = [];
 while ($row = $result->fetch_assoc()) {
-    // Make logo_url absolute (only repairshops have one)
+    // Only logo_url is a relative file path — make it absolute
     if (!empty($row['logo_url'])) {
         $row['logo_url'] = $baseUrl . $row['logo_url'];
     }
+    // profile_picture is already a base64 data URI — leave untouched
     $users[] = $row;
 }
 

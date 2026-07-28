@@ -356,28 +356,28 @@ $conn->close();
       <!-- ── STAT CARDS ── -->
       <div class="sub-stats">
         <div class="sub-stat-card sc-active">
-          <div class="sub-stat-icon">✅</div>
+          <div class="sub-stat-icon"><img src="../assets/icons/approve.svg" alt="" width="26" height="26"></div>
           <div>
             <div class="sub-stat-val"><?php echo $stats['active_count']; ?></div>
             <div class="sub-stat-lbl">Active Subscriptions</div>
           </div>
         </div>
         <div class="sub-stat-card sc-pending">
-          <div class="sub-stat-icon">⏳</div>
+          <div class="sub-stat-icon"><img src="../assets/icons/glass.svg" alt="" width="26" height="26"></div>
           <div>
             <div class="sub-stat-val"><?php echo $stats['pending_count']; ?></div>
             <div class="sub-stat-lbl">Pending Verification</div>
           </div>
         </div>
         <div class="sub-stat-card sc-expired">
-          <div class="sub-stat-icon">⚠️</div>
+        <div class="sub-stat-icon"><img src="../assets/icons/danger.svg" alt="" width="26" height="26" /></div>
           <div>
             <div class="sub-stat-val"><?php echo $stats['expired_count']; ?></div>
             <div class="sub-stat-lbl">Expired</div>
           </div>
         </div>
         <div class="sub-stat-card sc-revenue">
-          <div class="sub-stat-icon">💰</div>
+          <div class="sub-stat-icon"><img src="../assets/icons/bag.svg" alt="" width="26" height="26" /></div>
           <div>
             <div class="sub-stat-val">₱<?php echo number_format($stats['active_revenue'], 0); ?></div>
             <div class="sub-stat-lbl">Active Revenue</div>
@@ -386,8 +386,9 @@ $conn->close();
       </div>
 
       <!-- ── PENDING APPROVALS ── -->
-      <h2 style="font-size:1rem;font-weight:800;color:#0f172a;margin:0 0 .85rem;font-family:'Outfit',sans-serif;">
-        ⏳ Pending Payment Verification
+      <h2 style="font-size:1rem;font-weight:800;color:#0f172a;margin:0 0 .85rem;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:6px;">
+        <img src="../assets/icons/glass.svg" alt="" width="16" height="16" />
+        Pending Payment Verification
         <?php if (count($pending) > 0): ?>
         <span style="background:#ef4444;color:white;font-size:.7rem;padding:2px 8px;border-radius:12px;margin-left:6px;"><?php echo count($pending); ?></span>
         <?php endif; ?>
@@ -449,7 +450,7 @@ $conn->close();
 
       <!-- ── ALL SUBSCRIPTIONS TABLE ── -->
       <div class="dash-card">
-        <div class="card-title">📋 All Subscriptions</div>
+        <div class="card-title"><img src="../assets/icons/clip.svg" alt="" width="26" height="26" style="vertical-align:middle;margin-right:4px;" /> All Subscriptions</div>
         <?php if (empty($allSubs)): ?>
         <div class="empty-state">
           <div style="font-size:2rem;">📭</div>
