@@ -313,6 +313,40 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
   .section-title{font-size:28px;}
   .float-card{display:none;}
 }
+
+.auth-modal-overlay{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(2,6,23,0.85);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity 0.25s ease;
+  padding:20px;
+}
+.auth-modal-overlay.visible{opacity:1;pointer-events:all;}
+.auth-modal-box{
+  position:relative;width:100%;max-width:460px;height:90vh;max-height:720px;
+  background:#fff;border-radius:20px;overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,0.4);
+  transform:scale(0.92) translateY(20px);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.auth-modal-overlay.visible .auth-modal-box{transform:scale(1) translateY(0);}
+.auth-modal-box iframe{width:100%;height:100%;border:none;}
+.auth-modal-close{
+  position:absolute;top:12px;right:12px;z-index:10;
+  width:34px;height:34px;border-radius:50%;border:none;
+  background:rgba(15,23,42,0.85);color:#fff;font-size:20px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:background 0.2s;
+}
+.auth-modal-close:hover{background:#ef4444;}
+@media(max-width:480px){
+  .auth-modal-box{height:100vh;max-height:100vh;border-radius:0;}
+}
+
+html{
+  scroll-behavior:smooth;
+  scrollbar-gutter: stable;
+}
+
 </style>
 </head>
 <body>
@@ -329,13 +363,13 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
     <a href="#shops">Shops</a>
   </div>
   <div class="nav-cta">
-  <?php if($isLoggedIn): ?>
+<?php if($isLoggedIn): ?>
     <a href="shop-owner/dashboard.php" class="btn-login">Dashboard</a>
     <a href="logout.php" class="btn-register">Logout</a>
-  <?php else: ?>
-    <a href="login.php" class="btn-login">Log In</a>
-    <a href="signup.php" class="btn-register">Register Here</a>
-  <?php endif; ?>
+<?php else: ?>
+    <a href="login.php" class="btn-login" onclick="return openAuthModal('login.php', event)">Log In</a>
+    <a href="signup.php" class="btn-register" onclick="return openAuthModal('signup.php', event)">Register Here</a>
+<?php endif; ?>
 </div>
 </nav>
 
@@ -352,18 +386,18 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
     <h1>Find Trusted <span class="highlight">Repair Shops</span> in Davao</h1>
     <p class="hero-sub">Book phone, laptop, appliance, and gadget repairs in minutes. Connect with verified local repair shops — fast, reliable, and hassle-free.</p>
 <div class="hero-actions">
-  <?php if($isLoggedIn): ?>
+<?php if($isLoggedIn): ?>
     <a href="shop-owner/dashboard.php" class="btn-hero-primary">
       <img src="assets/icons/tools.svg" style="width:18px;height:18px;filter:brightness(0) invert(1);"> Go to Dashboard
     </a>
-  <?php else: ?>
-    <a href="signup.php" class="btn-hero-primary">
+<?php else: ?>
+    <a href="signup.php" class="btn-hero-primary" onclick="return openAuthModal('signup.php', event)">
       <img src="assets/icons/tools.svg" style="width:18px;height:18px;filter:brightness(0) invert(1);"> Find a Repair Shop
     </a>
-    <a href="signup.php?role=shop" class="btn-hero-secondary">
+    <a href="signup.php?role=shop" class="btn-hero-secondary" onclick="return openAuthModal('signup.php', event)">
       <img src="assets/icons/store.svg" style="width:18px;height:18px;filter:brightness(0) invert(1);"> Register Your Shop
     </a>
-  <?php endif; ?>
+<?php endif; ?>
 </div>
     <div class="hero-stats">
       <div class="stat-item">
@@ -550,8 +584,8 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
   <h2>Ready to Get Your Device Fixed?</h2>
   <p>Join hundreds of Davao customers already using Fix It Davao.</p>
   <div class="cta-actions">
-    <a href="register.php" class="btn-hero-primary" style="font-size:15px;">🔧 Find a Shop Now</a>
-    <a href="register.php?role=shop" class="btn-hero-secondary" style="font-size:15px;">🏪 List Your Shop</a>
+    <a href="login.php" class="btn-hero-primary" style="font-size:15px;" onclick="return openAuthModal('login.php', event)">🔧 Find a Shop Now</a>
+    <a href="signup.php?role=shop" class="btn-hero-secondary" style="font-size:15px;" onclick="return openAuthModal('signup.php?role=shop', event)">🏪 List Your Shop</a>
   </div>
 </section>
 
@@ -578,6 +612,14 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
     <span class="footer-davao">Made with 🧡 in Davao City, Philippines</span>
   </div>
 </footer>
+
+<!-- AUTH MODAL -->
+<div class="auth-modal-overlay" id="authModalOverlay">
+  <div class="auth-modal-box">
+    <button class="auth-modal-close" id="authModalClose">&times;</button>
+    <iframe id="authModalFrame" src="" frameborder="0"></iframe>
+  </div>
+</div>
 
 <script>
 // Smooth reveal on scroll
@@ -613,6 +655,49 @@ window.addEventListener('scroll', () => {
 setTimeout(function () {
     window.location.href = "login.php?timeout=1";
 }, 1800000); // 30 minutes
+
+const authOverlay = document.getElementById('authModalOverlay');
+const authFrame    = document.getElementById('authModalFrame');
+const authClose    = document.getElementById('authModalClose');
+let pollInterval = null;
+
+function openAuthModal(page, e) {
+  if (e) e.preventDefault();
+  authFrame.src = page;
+  authOverlay.classList.add('visible');
+  document.body.style.overflow = 'hidden';
+
+  // Poll para ma-detect kung na-redirect na ang iframe (successful login/signup)
+  clearInterval(pollInterval);
+  pollInterval = setInterval(() => {
+    try {
+      const frameUrl = authFrame.contentWindow.location.href;
+      const isStillOnAuthPage = frameUrl.includes('login.php') || frameUrl.includes('signup.php');
+      if (!isStillOnAuthPage) {
+        // Na-redirect na sa dashboard/admin — break out sa iframe, i-navigate ang tibuok tab
+        window.location.href = frameUrl;
+      }
+    } catch (err) {
+      // cross-origin guard, safe to ignore (dili ni mahitabo sa localhost)
+    }
+  }, 500);
+
+  return false;
+}
+
+function closeAuthModal() {
+  authOverlay.classList.remove('visible');
+  document.body.style.overflow = '';
+  clearInterval(pollInterval);
+
+  // Delay clearing sa iframe src hangtod mahuman ang fade-out (0.25s sa CSS)
+  setTimeout(() => {
+    authFrame.src = '';
+  }, 250); // dapat mo-match sa transition time sa .auth-modal-overlay (0.25s)
+}
+
+authClose.addEventListener('click', closeAuthModal);
+authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) closeAuthModal(); });
 </script>
 </body>
 </html>

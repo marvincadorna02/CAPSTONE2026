@@ -215,27 +215,146 @@ $conn->close();
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
     <link rel="apple-touch-icon" href="assets/images/logo.png" />
     <link rel="shortcut icon" href="assets/images/logo.png" />
-    <link rel="stylesheet" href="assets/css/login.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      .password-wrapper { position: relative; width: 100%; }
-      .password-wrapper input { width: 100%; padding-right: 45px; }
-      .toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #666; transition: color 0.3s ease; }
-      .toggle-password:hover { color: #333; }
-      .toggle-password svg { width: 20px; height: 20px; }
-      .input-error { border-color: #ef4444 !important; background: #fff5f5 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.1) !important; }
+      *{margin:0;padding:0;box-sizing:border-box;}
+      :root{
+        --primary:#0f172a;
+        --primary-dark:#020617;
+        --accent:#f59e0b;
+        --accent-light:#fbbf24;
+        --accent-dark:#d97706;
+        --text-secondary:#64748b;
+        --border:#e2e8f0;
+      }
+      html,body{
+        font-family:'Outfit',-apple-system,sans-serif;
+        background:var(--primary-dark);
+        height:100%;
+        overflow:hidden;
+        position:relative;
+      }
+
+      /* ── BACKGROUND FX (same as home.php hero) ── */
+      .bg-grid{
+        position:fixed;inset:0;z-index:0;
+        background-image:linear-gradient(rgba(245,158,11,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,0.05) 1px,transparent 1px);
+        background-size:60px 60px;
+      }
+      .bg-glow{
+        position:fixed;top:-200px;right:-200px;z-index:0;
+        width:700px;height:700px;
+        background:radial-gradient(circle,rgba(245,158,11,0.14) 0%,transparent 65%);
+        pointer-events:none;
+      }
+      .bg-glow2{
+        position:fixed;bottom:-150px;left:-150px;z-index:0;
+        width:600px;height:600px;
+        background:radial-gradient(circle,rgba(59,130,246,0.1) 0%,transparent 65%);
+        pointer-events:none;
+      }
+
+      /* ── AUTH SECTION (fills modal, no navbar/badge, no scroll) ── */
+      .auth-wrap{
+        position:relative;z-index:2;
+        height:100vh;
+        display:flex;align-items:center;justify-content:center;
+        padding:10px 30px;
+      }
+
+      /* ── FLOATING CARD (matches home.php .float-card style) ── */
+      .auth-card{
+        width:100%;
+        background:rgba(30,41,59,0.85);
+        border:1px solid rgba(245,158,11,0.2);
+        border-radius:20px;padding:28px 30px;
+        backdrop-filter:blur(14px);
+        box-shadow:0 30px 80px rgba(0,0,0,0.4);
+        animation:fadeUp 0.6s ease both;
+      }
+      @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+
+      .auth-card h1{
+        font-size:24px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:5px;
+      }
+      .auth-card .subtext{
+        font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:22px;
+      }
+
+      /* Role tabs */
+      .section-label{
+        display:block;font-size:11px;font-weight:700;letter-spacing:1px;
+        color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:10px;
+      }
+      .user-type-wrapper{margin-bottom:16px;}
+      .user-type-selection{display:flex;gap:8px;background:rgba(255,255,255,0.05);padding:5px;border-radius:12px;}
+      .user-type{flex:1;position:relative;}
+      .user-type input{position:absolute;opacity:0;width:0;height:0;}
+      .user-type span{
+        display:flex;align-items:center;justify-content:center;
+        padding:9px 6px;border-radius:9px;
+        font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.5);
+        cursor:pointer;transition:all 0.2s;text-align:center;
+      }
+      .user-type input:checked + span{
+        background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+        color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3);
+      }
+
+      /* Form fields */
+      .form-group{margin-bottom:12px;}
+      .form-group input{
+        width:100%;padding:12px 16px;
+        background:rgba(255,255,255,0.06);
+        border:1.5px solid rgba(255,255,255,0.1);
+        border-radius:11px;color:#fff;
+        font-family:'Outfit',sans-serif;font-size:14px;
+        transition:all 0.2s;
+      }
+      .form-group input::placeholder{color:rgba(255,255,255,0.35);}
+      .form-group input:focus{outline:none;border-color:var(--accent);background:rgba(245,158,11,0.06);}
+      .input-error{border-color:#ef4444 !important;background:rgba(239,68,68,0.08) !important;}
+
+      .password-wrapper{position:relative;width:100%;}
+      .password-wrapper input{width:100%;padding-right:45px;}
+      .toggle-password{
+        position:absolute;right:12px;top:50%;transform:translateY(-50%);
+        cursor:pointer;width:22px;height:22px;
+        display:flex;align-items:center;justify-content:center;
+        color:rgba(255,255,255,0.4);transition:color 0.2s;
+      }
+      .toggle-password:hover{color:var(--accent-light);}
+      .toggle-password svg{width:19px;height:19px;}
+
+      .forgot-password{text-align:right;margin-bottom:16px;margin-top:-4px;}
+      .forgot-password a{color:var(--accent-light);font-size:12.5px;text-decoration:none;font-weight:500;}
+      .forgot-password a:hover{text-decoration:underline;}
+
+      .sign-in-btn{
+        width:100%;padding:14px;
+        background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+        color:#fff;border:none;border-radius:12px;
+        font-size:14.5px;font-weight:700;font-family:'Outfit',sans-serif;
+        cursor:pointer;transition:all 0.25s;
+        box-shadow:0 8px 24px rgba(245,158,11,0.3);
+      }
+      .sign-in-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(245,158,11,0.4);}
+      .sign-in-btn:disabled{opacity:0.7;cursor:not-allowed;transform:none;}
+
+      .signup-link{text-align:center;margin-top:16px;font-size:13px;color:rgba(255,255,255,0.4);}
+      .signup-link a{color:var(--accent-light);font-weight:600;text-decoration:none;}
+      .signup-link a:hover{text-decoration:underline;}
+
+      .footer{display:none;}
 
       /* ── DIALOG ── */
-      .dialog-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
+      .dialog-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.8); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
       .dialog-overlay.visible { opacity: 1; pointer-events: all; }
-      .dialog-box { background: white; border-radius: 24px; max-width: 400px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,0.28); transform: scale(0.88) translateY(28px); transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease; opacity: 0; overflow: hidden; }
+      .dialog-box { background: #0f172a; border: 1px solid rgba(245,158,11,0.2); border-radius: 24px; max-width: 400px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,0.5); transform: scale(0.88) translateY(28px); transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease; opacity: 0; overflow: hidden; }
       .dialog-overlay.visible .dialog-box { transform: scale(1) translateY(0); opacity: 1; }
 
-      /* header */
       .dlg-header { padding: 30px 26px 22px; text-align: center; position: relative; }
-      .dlg-header::after { content:""; position:absolute; bottom:-1px; left:0; right:0; height:22px; background:#fff; border-radius:22px 22px 0 0; }
+      .dlg-header::after { content:""; position:absolute; bottom:-1px; left:0; right:0; height:22px; background:#0f172a; border-radius:22px 22px 0 0; }
       .dlg-header.red    { background: linear-gradient(135deg,#ef4444,#dc2626); }
       .dlg-header.amber  { background: linear-gradient(135deg,#f59e0b,#d97706); }
       .dlg-header.slate  { background: linear-gradient(135deg,#64748b,#475569); }
@@ -243,89 +362,100 @@ $conn->close();
       .dlg-icon { width:58px; height:58px; background:rgba(255,255,255,0.2); border:3px solid rgba(255,255,255,0.4); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.12s both; }
       @keyframes popIn { from{transform:scale(0) rotate(-20deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1} }
       .dlg-icon svg { width:26px; height:26px; stroke:white; fill:none; stroke-width:2.3; stroke-linecap:round; stroke-linejoin:round; }
-      .dlg-title { font-family:"Montserrat",sans-serif; font-size:19px; font-weight:800; color:white; }
+      .dlg-title { font-family:'Outfit',sans-serif; font-size:19px; font-weight:800; color:white; }
 
-      /* body */
       .dlg-body { padding: 18px 26px 26px; }
-      .dlg-info { border-radius:12px; padding:13px 15px; margin-bottom:18px; font-family:"Poppins",sans-serif; font-size:13px; line-height:1.7; }
-      .dlg-info.red   { background:#fff5f5; border:1.5px solid #fecaca; color:#7f1d1d; }
-      .dlg-info.amber { background:#fffbeb; border:1.5px solid #fde68a; color:#78350f; }
-      .dlg-info.slate { background:#f8fafc; border:1.5px solid #cbd5e1; color:#1e293b; }
+      .dlg-info { border-radius:12px; padding:13px 15px; margin-bottom:18px; font-family:'Outfit',sans-serif; font-size:13px; line-height:1.7; }
+      .dlg-info.red   { background:rgba(239,68,68,0.1); border:1.5px solid rgba(239,68,68,0.3); color:#fca5a5; }
+      .dlg-info.amber { background:rgba(245,158,11,0.1); border:1.5px solid rgba(245,158,11,0.3); color:#fcd34d; }
+      .dlg-info.slate { background:rgba(148,163,184,0.1); border:1.5px solid rgba(148,163,184,0.3); color:#cbd5e1; }
 
-      .dlg-btn { width:100%; padding:12px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:"Poppins",sans-serif; cursor:pointer; transition:all 0.25s ease; color:white; }
+      .dlg-btn { width:100%; padding:12px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; transition:all 0.25s ease; color:white; }
       .dlg-btn:hover { transform:translateY(-2px); }
       .dlg-btn.red   { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 4px 14px rgba(239,68,68,0.35); }
       .dlg-btn.amber { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 14px rgba(245,158,11,0.35); }
       .dlg-btn.slate { background:linear-gradient(135deg,#64748b,#475569); box-shadow:0 4px 14px rgba(100,116,139,0.35); }
+
+      @media(max-width:480px){
+        .auth-card{padding:28px 22px;}
+        .auth-card h1{font-size:22px;}
+      }
     </style>
   </head>
   <body>
-    <div class="login-container">
-      <div class="logo-section">
-        <div class="car-icon"><img src="assets/images/logo.png" alt="Logo" /></div>
-        <h1 class="company-name">FIX IT DAVAO</h1>
-        <div class="company-subtitle">Find, Fix, Done.</div>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+    <div class="bg-glow2"></div>
+
+    <!-- AUTH CARD -->
+    <div class="auth-wrap">
+      <div style="width:100%;max-width:460px;">
+
+        <div class="auth-card">
+          <h1>Welcome Back</h1>
+          <p class="subtext">Sign in to book, manage, or track your repairs.</p>
+
+          <form id="loginForm" method="POST" action="login.php">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
+
+            <div class="user-type-wrapper">
+              <label class="section-label">Login As</label>
+              <div class="user-type-selection">
+                <label class="user-type">
+                  <input type="radio" name="userType" value="customer"
+                    <?php echo (!isset($_POST['userType']) || $_POST['userType'] === 'customer') ? 'checked' : ''; ?> />
+                  <span>Customer</span>
+                </label>
+                <label class="user-type">
+                  <input type="radio" name="userType" value="repairshop"
+                    <?php echo (isset($_POST['userType']) && $_POST['userType'] === 'repairshop') ? 'checked' : ''; ?> />
+                  <span>Repair Shop</span>
+                </label>
+                <label class="user-type">
+                  <input type="radio" name="userType" value="admin"
+                    <?php echo (isset($_POST['userType']) && $_POST['userType'] === 'admin') ? 'checked' : ''; ?> />
+                  <span>Admin</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" id="emailGroup">
+              <input type="email" id="emailInput" name="email" placeholder="Email address"
+                value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
+                <?php echo (!isset($_POST['userType']) || $_POST['userType'] !== 'admin') ? 'required' : ''; ?>
+                <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
+            </div>
+
+            <div class="form-group" id="usernameGroup" style="display:none;">
+              <input type="text" id="usernameInput" name="username" placeholder="Username" autocomplete="off"
+                value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
+                <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
+            </div>
+
+            <div class="form-group">
+              <div class="password-wrapper">
+                <input type="password" id="password" name="password" placeholder="Password" required
+                  <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
+                <span class="toggle-password" onclick="togglePasswordVisibility('password')">
+                  <svg id="eyeIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <svg id="eyeSlashIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="forgot-password"><a href="#">Forgot Password?</a></div>
+            <button type="submit" class="sign-in-btn">Sign in</button>
+            <div class="signup-link">Don't have an account? <a href="signup.php">Sign Up</a></div>
+          </form>
+        </div>
+
+        <div class="footer">© 2026 FIX IT DAVAO — All Rights Reserved</div>
       </div>
-
-      <form id="loginForm" method="POST" action="login.php">
-        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
-
-        <div class="user-type-wrapper">
-          <label class="section-label">Login As:</label>
-          <div class="user-type-selection">
-            <label class="user-type">
-              <input type="radio" name="userType" value="customer"
-                <?php echo (!isset($_POST['userType']) || $_POST['userType'] === 'customer') ? 'checked' : ''; ?> />
-              <span>Customer</span>
-            </label>
-            <label class="user-type">
-              <input type="radio" name="userType" value="repairshop"
-                <?php echo (isset($_POST['userType']) && $_POST['userType'] === 'repairshop') ? 'checked' : ''; ?> />
-              <span>Repair Shop</span>
-            </label>
-            <label class="user-type">
-              <input type="radio" name="userType" value="admin"
-                <?php echo (isset($_POST['userType']) && $_POST['userType'] === 'admin') ? 'checked' : ''; ?> />
-              <span>Admin</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group" id="emailGroup">
-          <input type="email" id="emailInput" name="email" placeholder="Email address"
-            value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
-            <?php echo (!isset($_POST['userType']) || $_POST['userType'] !== 'admin') ? 'required' : ''; ?>
-            <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
-        </div>
-
-        <div class="form-group" id="usernameGroup" style="display:none;">
-          <input type="text" id="usernameInput" name="username" placeholder="Username" autocomplete="off"
-            value="<?php echo htmlspecialchars($_POST['username'] ?? ''); ?>"
-            <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
-        </div>
-
-        <div class="form-group">
-          <div class="password-wrapper">
-            <input type="password" id="password" name="password" placeholder="Password" required
-              <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
-            <span class="toggle-password" onclick="togglePasswordVisibility('password')">
-              <svg id="eyeIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <svg id="eyeSlashIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <div class="forgot-password"><a href="#">Forgot Password?</a></div>
-        <button type="submit" class="sign-in-btn">Sign in</button>
-        <div class="signup-link">Don't have an account? <a href="signup.php">Sign Up</a></div>
-      </form>
-
-      <div class="footer">© 2026 All Rights Reserved. | FIX IT DAVAO</div>
     </div>
 
     <!-- ── DIALOG ── -->
@@ -356,7 +486,6 @@ $conn->close();
       });
       <?php endif; ?>
 
-      // ── Dialog config per type ─────────────────────────────────
       const DIALOG_CFG = {
         general: {
           color:   "red",
@@ -405,11 +534,9 @@ $conn->close();
         dlgBtn.className      = `dlg-btn ${cfg.color}`;
         dlgBtn.textContent    = cfg.btnText;
 
-        // Re-trigger icon animation
         const icon  = dlgHeader.querySelector(".dlg-icon");
         const clone = icon.cloneNode(true);
         icon.parentNode.replaceChild(clone, icon);
-        // Re-attach svg into the clone
         clone.querySelector("svg").innerHTML = cfg.icon;
 
         dialogOverlay.classList.add("visible");
@@ -429,7 +556,6 @@ $conn->close();
       dlgBtn.addEventListener("click", hideDialog);
       dialogOverlay.addEventListener("click", e => { if (e.target === dialogOverlay) hideDialog(); });
 
-      // ── Toggle password visibility ─────────────────────────────
       function togglePasswordVisibility(fieldId) {
         const field = document.getElementById(fieldId);
         const eye   = document.getElementById("eyeIcon-" + fieldId);
@@ -441,7 +567,6 @@ $conn->close();
         }
       }
 
-      // ── Role switching ─────────────────────────────────────────
       const radios        = document.querySelectorAll('input[name="userType"]');
       const emailGroup    = document.getElementById("emailGroup");
       const usernameGroup = document.getElementById("usernameGroup");
@@ -465,7 +590,6 @@ $conn->close();
       const checkedRole = document.querySelector('input[name="userType"]:checked');
       if (checkedRole) updateFieldsByRole(checkedRole.value);
 
-      // ── Loading state on submit ────────────────────────────────
       document.getElementById("loginForm").addEventListener("submit", function () {
         const btn = this.querySelector(".sign-in-btn");
         btn.textContent = "Logging in..."; btn.disabled = true;

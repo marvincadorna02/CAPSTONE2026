@@ -119,41 +119,163 @@ $conn->close();
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
     <link rel="apple-touch-icon" href="assets/images/logo.png" />
     <link rel="shortcut icon" href="assets/images/logo.png" />
-    <link rel="stylesheet" href="assets/css/style.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-      .password-wrapper { position: relative; width: 100%; }
-      .password-wrapper input { width: 100%; padding-right: 45px; }
-      .toggle-password { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #666; transition: color 0.3s ease; }
-      .toggle-password:hover { color: #333; }
-      .toggle-password svg { width: 20px; height: 20px; display: none; }
-      .toggle-password svg:first-of-type { display: block; }
-      .input-error { border-color: #ef4444 !important; background: #fff5f5 !important; box-shadow: 0 0 0 3px rgba(239,68,68,0.15) !important; }
+      *{margin:0;padding:0;box-sizing:border-box;}
+      :root{
+        --primary:#0f172a;
+        --primary-dark:#020617;
+        --accent:#f59e0b;
+        --accent-light:#fbbf24;
+        --accent-dark:#d97706;
+        --text-secondary:#64748b;
+      }
+      html,body{
+        font-family:'Outfit',-apple-system,sans-serif;
+        background:var(--primary-dark);
+        height:100%;
+        overflow:hidden;
+        position:relative;
+      }
 
-      /* ─── DIALOG OVERLAY ─── */
-      .dialog-overlay { position: fixed; inset: 0; background: rgba(10,15,30,0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
+      /* ── BACKGROUND FX (same as home.php hero) ── */
+      .bg-grid{
+        position:fixed;inset:0;z-index:0;
+        background-image:linear-gradient(rgba(245,158,11,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,0.05) 1px,transparent 1px);
+        background-size:60px 60px;
+      }
+      .bg-glow{
+        position:fixed;top:-200px;right:-200px;z-index:0;
+        width:700px;height:700px;
+        background:radial-gradient(circle,rgba(245,158,11,0.14) 0%,transparent 65%);
+        pointer-events:none;
+      }
+      .bg-glow2{
+        position:fixed;bottom:-150px;left:-150px;z-index:0;
+        width:600px;height:600px;
+        background:radial-gradient(circle,rgba(59,130,246,0.1) 0%,transparent 65%);
+        pointer-events:none;
+      }
+
+      /* ── AUTH SECTION (fills modal, no navbar/badge, no scroll) ── */
+      .auth-wrap{
+        position:relative;z-index:2;
+        height:100vh;
+        display:flex;align-items:center;justify-content:center;
+        padding:24px 20px;
+      }
+
+      /* ── FLOATING CARD (matches home.php .float-card style) ── */
+      .auth-card{
+        width:100%;
+        background:rgba(30,41,59,0.85);
+        border:1px solid rgba(245,158,11,0.2);
+        border-radius:20px;padding:26px 30px;
+        backdrop-filter:blur(14px);
+        box-shadow:0 30px 80px rgba(0,0,0,0.4);
+        animation:fadeUp 0.6s ease both;
+      }
+      @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+
+      .auth-card h1{
+        font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;margin-bottom:4px;
+      }
+      .auth-card .subtext{
+        font-size:12.5px;color:rgba(255,255,255,0.45);margin-bottom:18px;
+      }
+
+      /* Role tabs */
+      .section-label{
+        display:block;font-size:11px;font-weight:700;letter-spacing:1px;
+        color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:8px;
+      }
+      .user-type-wrapper{margin-bottom:14px;}
+      .user-type-selection{display:flex;gap:8px;background:rgba(255,255,255,0.05);padding:5px;border-radius:12px;}
+      .user-type{flex:1;position:relative;}
+      .user-type input{position:absolute;opacity:0;width:0;height:0;}
+      .user-type span{
+        display:flex;align-items:center;justify-content:center;
+        padding:9px 6px;border-radius:9px;
+        font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.5);
+        cursor:pointer;transition:all 0.2s;text-align:center;
+      }
+      .user-type input:checked + span{
+        background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+        color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3);
+      }
+
+      /* Form fields */
+      .form-group{margin-bottom:11px;}
+      .form-group input{
+        width:100%;padding:12px 16px;
+        background:rgba(255,255,255,0.06);
+        border:1.5px solid rgba(255,255,255,0.1);
+        border-radius:11px;color:#fff;
+        font-family:'Outfit',sans-serif;font-size:14px;
+        transition:all 0.2s;
+      }
+      .form-group input::placeholder{color:rgba(255,255,255,0.35);}
+      .form-group input:focus{outline:none;border-color:var(--accent);background:rgba(245,158,11,0.06);}
+      .input-error{border-color:#ef4444 !important;background:rgba(239,68,68,0.08) !important;}
+
+      .password-wrapper{position:relative;width:100%;}
+      .password-wrapper input{width:100%;padding-right:45px;}
+      .toggle-password{
+        position:absolute;right:12px;top:50%;transform:translateY(-50%);
+        cursor:pointer;width:22px;height:22px;
+        display:flex;align-items:center;justify-content:center;
+        color:rgba(255,255,255,0.4);transition:color 0.2s;
+      }
+      .toggle-password:hover{color:var(--accent-light);}
+      .toggle-password svg{width:19px;height:19px;display:none;}
+      .toggle-password svg:first-of-type{display:block;}
+
+      /* Terms checkbox */
+      .remember-me{
+        display:flex;align-items:center;gap:8px;margin-bottom:16px;margin-top:2px;
+      }
+      .remember-me input[type="checkbox"]{
+        width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;
+      }
+      .remember-me label{
+        font-size:12px;color:rgba(255,255,255,0.55);cursor:pointer;line-height:1.4;
+      }
+
+      .sign-in-btn{
+        width:100%;padding:14px;
+        background:linear-gradient(135deg,var(--accent),var(--accent-dark));
+        color:#fff;border:none;border-radius:12px;
+        font-size:14.5px;font-weight:700;font-family:'Outfit',sans-serif;
+        cursor:pointer;transition:all 0.25s;
+        box-shadow:0 8px 24px rgba(245,158,11,0.3);
+      }
+      .sign-in-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(245,158,11,0.4);}
+      .sign-in-btn:disabled{opacity:0.7;cursor:not-allowed;transform:none;}
+
+      .signup-link{text-align:center;margin-top:16px;font-size:13px;color:rgba(255,255,255,0.4);}
+      .signup-link a{color:var(--accent-light);font-weight:600;text-decoration:none;}
+      .signup-link a:hover{text-decoration:underline;}
+
+      .footer{display:none;}
+
+      /* ─── DIALOG OVERLAY (dark themed) ─── */
+      .dialog-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.82); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
       .dialog-overlay.visible { opacity: 1; pointer-events: all; }
-      .dialog-box { background: #fff; border-radius: 24px; padding: 0; max-width: 400px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,0.3); transform: scale(0.88) translateY(30px); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease; opacity: 0; overflow: hidden; }
+      .dialog-box { background: #0f172a; border: 1px solid rgba(245,158,11,0.2); border-radius: 24px; padding: 0; max-width: 400px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,0.5); transform: scale(0.88) translateY(30px); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease; opacity: 0; overflow: hidden; }
       .dialog-overlay.visible .dialog-box { transform: scale(1) translateY(0); opacity: 1; }
 
       @keyframes shake { 0%,100%{transform:scale(1) translateX(0)} 15%{transform:scale(1) translateX(-8px)} 30%{transform:scale(1) translateX(8px)} 45%{transform:scale(1) translateX(-6px)} 60%{transform:scale(1) translateX(6px)} 75%{transform:scale(1) translateX(-3px)} 90%{transform:scale(1) translateX(3px)} }
       .dialog-box.shake { animation: shake 0.55s cubic-bezier(0.36,0.07,0.19,0.97) both; }
 
-      /* success (gold) header */
       .dialog-header-success { background: linear-gradient(135deg,#f59e0b,#d97706); padding: 32px 28px 24px; text-align: center; position: relative; }
-      /* pending (blue) header */
       .dialog-header-pending { background: linear-gradient(135deg,#3b82f6,#1d4ed8); padding: 32px 28px 24px; text-align: center; position: relative; }
-      /* error (red) header */
       .dialog-header-error    { background: linear-gradient(135deg,#ff3b3b,#c0392b); padding: 32px 28px 24px; text-align: center; position: relative; }
-      /* mismatch (orange) header */
       .dialog-header-mismatch { background: linear-gradient(135deg,#f97316,#c2410c); padding: 32px 28px 24px; text-align: center; position: relative; }
 
       .dialog-header-success::after,
       .dialog-header-pending::after,
       .dialog-header-error::after,
-      .dialog-header-mismatch::after { content:""; position:absolute; bottom:-1px; left:0; right:0; height:20px; background:#fff; border-radius:20px 20px 0 0; }
+      .dialog-header-mismatch::after { content:""; position:absolute; bottom:-1px; left:0; right:0; height:20px; background:#0f172a; border-radius:20px 20px 0 0; }
 
       .dialog-header-icon { width:64px; height:64px; background:rgba(255,255,255,0.18); border:3px solid rgba(255,255,255,0.4); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; animation:popIn 0.45s cubic-bezier(0.34,1.56,0.64,1) 0.15s both; }
       @keyframes popIn { from{transform:scale(0) rotate(-20deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
@@ -161,132 +283,142 @@ $conn->close();
       .check-path { stroke-dasharray:50; stroke-dashoffset:50; animation:drawCheck 0.45s ease 0.4s forwards; }
       @keyframes drawCheck { to{stroke-dashoffset:0} }
 
-      .dialog-header-title { font-family:"Montserrat",sans-serif; font-size:22px; font-weight:800; color:#fff; letter-spacing:0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.15); }
+      .dialog-header-title { font-family:'Outfit',sans-serif; font-size:22px; font-weight:800; color:#fff; letter-spacing:0.3px; text-shadow:0 2px 8px rgba(0,0,0,0.15); }
       .dialog-body { padding:20px 28px 28px; text-align:center; }
-      .dialog-message { font-family:"Poppins",sans-serif; font-size:13px; color:#64748b; line-height:1.6; margin-bottom:6px; }
-      .dialog-name    { font-family:"Poppins",sans-serif; font-size:14px; font-weight:700; color:#f59e0b; margin-bottom:8px; }
-      .dialog-pending-note { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:12px 14px; margin-bottom:20px; font-family:"Poppins",sans-serif; font-size:12.5px; color:#1e40af; line-height:1.6; text-align:left; }
-      .dialog-pending-note strong { color:#1e40af; }
+      .dialog-message { font-family:'Outfit',sans-serif; font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; margin-bottom:6px; }
+      .dialog-name    { font-family:'Outfit',sans-serif; font-size:14px; font-weight:700; color:var(--accent-light); margin-bottom:8px; }
+      .dialog-pending-note { background:rgba(59,130,246,0.1); border:1.5px solid rgba(59,130,246,0.3); border-radius:12px; padding:12px 14px; margin-bottom:20px; font-family:'Outfit',sans-serif; font-size:12.5px; color:#93c5fd; line-height:1.6; text-align:left; }
+      .dialog-pending-note strong { color:#bfdbfe; }
 
-      .dialog-btn-gold   { width:100%; padding:13px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:"Poppins",sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(245,158,11,0.4); transition:all 0.25s ease; }
-      .dialog-btn-blue   { width:100%; padding:13px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:"Poppins",sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(59,130,246,0.4); transition:all 0.25s ease; }
+      .dialog-btn-gold   { width:100%; padding:13px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(245,158,11,0.4); transition:all 0.25s ease; }
+      .dialog-btn-blue   { width:100%; padding:13px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(59,130,246,0.4); transition:all 0.25s ease; }
       .dialog-btn-gold:hover, .dialog-btn-blue:hover { transform:translateY(-2px); }
-      .dialog-sub { margin-top:12px; font-family:"Poppins",sans-serif; font-size:11px; color:#94a3b8; }
+      .dialog-sub { margin-top:12px; font-family:'Outfit',sans-serif; font-size:11px; color:rgba(255,255,255,0.3); }
 
-      /* error dialog */
       .dialog-hint-row { display:flex; align-items:flex-start; gap:10px; border-radius:12px; padding:12px 14px; margin-bottom:20px; text-align:left; }
-      .dialog-hint-row.red    { background:#fff5f5; border:1.5px solid #fecaca; }
-      .dialog-hint-row.orange { background:#fff7ed; border:1.5px solid #fed7aa; }
+      .dialog-hint-row.red    { background:rgba(239,68,68,0.1); border:1.5px solid rgba(239,68,68,0.3); }
+      .dialog-hint-row.orange { background:rgba(249,115,22,0.1); border:1.5px solid rgba(249,115,22,0.3); }
       .dialog-hint-row .hint-icon { font-size:18px; margin-top:1px; flex-shrink:0; }
-      .dialog-hint-text { font-family:"Poppins",sans-serif; font-size:13px; line-height:1.6; }
-      .dialog-hint-text.red    { color:#7f1d1d; }
-      .dialog-hint-text.orange { color:#7c2d12; }
+      .dialog-hint-text { font-family:'Outfit',sans-serif; font-size:13px; line-height:1.6; }
+      .dialog-hint-text.red    { color:#fca5a5; }
+      .dialog-hint-text.orange { color:#fdba74; }
       .pw-bars { display:flex; gap:5px; margin-bottom:20px; }
-      .pw-bar  { flex:1; height:5px; border-radius:4px; background:#fee2e2; }
+      .pw-bar  { flex:1; height:5px; border-radius:4px; background:rgba(239,68,68,0.25); }
       .pw-bar.filled { background:#f97316; }
       .dialog-tips { list-style:none; margin-bottom:22px; text-align:left; }
-      .dialog-tips li { font-family:"Poppins",sans-serif; font-size:12.5px; color:#64748b; padding:5px 0; display:flex; align-items:center; gap:8px; border-bottom:1px solid #f1f5f9; }
+      .dialog-tips li { font-family:'Outfit',sans-serif; font-size:12.5px; color:rgba(255,255,255,0.45); padding:5px 0; display:flex; align-items:center; gap:8px; border-bottom:1px solid rgba(255,255,255,0.06); }
       .dialog-tips li:last-child { border:none; }
       .dialog-tips li::before { content:"•"; font-size:18px; line-height:1; }
       .dialog-tips.red    li::before { color:#ef4444; }
       .dialog-tips.orange li::before { color:#f97316; }
-      .dialog-btn-red    { width:100%; padding:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:"Poppins",sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(239,68,68,0.4); transition:all 0.25s ease; }
-      .dialog-btn-orange { width:100%; padding:13px; background:linear-gradient(135deg,#f97316,#c2410c); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:"Poppins",sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(249,115,22,0.4); transition:all 0.25s ease; }
+      .dialog-btn-red    { width:100%; padding:13px; background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(239,68,68,0.4); transition:all 0.25s ease; }
+      .dialog-btn-orange { width:100%; padding:13px; background:linear-gradient(135deg,#f97316,#c2410c); color:white; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; box-shadow:0 4px 18px rgba(249,115,22,0.4); transition:all 0.25s ease; }
       .dialog-btn-red:hover, .dialog-btn-orange:hover { transform:translateY(-2px); }
 
-      /* confetti */
       .confetti { position:absolute; width:8px; height:8px; border-radius:50%; opacity:0; }
       .confetti:nth-child(1){background:#fff;top:15%;left:12%;animation:confettiFall 1.2s ease 0.3s forwards;}
       .confetti:nth-child(2){background:#fde68a;top:10%;left:80%;animation:confettiFall 1s ease 0.5s forwards;border-radius:2px;}
       .confetti:nth-child(3){background:#fff;top:20%;left:55%;animation:confettiFall 1.4s ease 0.2s forwards;}
       @keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(60px) rotate(360deg)}}
+
+      @media(max-width:480px){
+        .auth-card{padding:22px 20px;}
+        .auth-card h1{font-size:20px;}
+      }
     </style>
   </head>
   <body>
-    <div class="login-container">
-      <div class="logo-section">
-        <div class="car-icon"><img src="assets/images/logo.png" alt="Logo" /></div>
-        <h1 class="company-name">FIX IT DAVAO</h1>
-        <div class="company-subtitle">Find, Fix, Done.</div>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+    <div class="bg-glow2"></div>
+
+    <!-- AUTH CARD -->
+    <div class="auth-wrap">
+      <div style="width:100%;max-width:460px;">
+
+        <div class="auth-card">
+          <h1>Create Account</h1>
+          <p class="subtext">Join Fix It Davao and get started today.</p>
+
+          <form id="signupForm" method="POST" action="signup.php">
+            <div class="user-type-wrapper">
+              <label class="section-label">Sign Up As</label>
+              <div class="user-type-selection">
+                <label class="user-type">
+                  <input type="radio" name="userType" value="customer" <?php echo ($oldRole !== 'repairshop') ? 'checked' : ''; ?> />
+                  <span>Customer</span>
+                </label>
+                <label class="user-type">
+                  <input type="radio" name="userType" value="repairshop" <?php echo ($oldRole === 'repairshop') ? 'checked' : ''; ?> />
+                  <span>Repair Shop</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group" id="fullNameGroup" <?php echo ($oldRole === 'repairshop') ? 'style="display:none"' : ''; ?>>
+              <input type="text" id="fullName" name="fullName" placeholder="Full Name"
+                value="<?php echo htmlspecialchars($oldName); ?>"
+                <?php echo ($oldRole !== 'repairshop') ? 'required' : ''; ?>
+                <?php echo (!empty($error) && empty($oldName) && $oldRole !== 'repairshop') ? 'class="input-error"' : ''; ?> />
+            </div>
+
+            <div class="form-group" id="shopNameGroup" <?php echo ($oldRole !== 'repairshop') ? 'style="display:none"' : ''; ?>>
+              <input type="text" id="shopName" name="shopName" placeholder="Repair Shop Name"
+                value="<?php echo htmlspecialchars($oldShopName); ?>"
+                <?php echo ($oldRole === 'repairshop') ? 'required' : ''; ?>
+                <?php echo (!empty($error) && empty($oldShopName) && $oldRole === 'repairshop') ? 'class="input-error"' : ''; ?> />
+            </div>
+
+            <div class="form-group">
+              <input type="email" id="email" name="email" placeholder="Email address"
+                value="<?php echo htmlspecialchars($oldEmail); ?>" required
+                <?php echo (!empty($error) && empty($oldEmail)) ? 'class="input-error"' : ''; ?> />
+            </div>
+
+            <div class="form-group">
+              <div class="password-wrapper">
+                <input type="password" id="password" name="password" placeholder="Password" required
+                  <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
+                <span class="toggle-password" onclick="togglePasswordVisibility('password')">
+                  <svg id="eyeIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <svg id="eyeSlashIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="password-wrapper">
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" required
+                  <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
+                <span class="toggle-password" onclick="togglePasswordVisibility('confirmPassword')">
+                  <svg id="eyeIcon-confirmPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <svg id="eyeSlashIcon-confirmPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <div class="remember-me">
+              <input type="checkbox" id="terms" name="terms" required />
+              <label for="terms">I agree to the Terms & Conditions</label>
+            </div>
+
+            <button type="submit" class="sign-in-btn">Sign Up</button>
+            <div class="signup-link">Already have an account? <a href="login.php">Sign In</a></div>
+          </form>
+        </div>
+
+        <div class="footer">© 2026 All Rights Reserved. | FIX IT DAVAO</div>
       </div>
-
-      <form id="signupForm" method="POST" action="signup.php">
-        <div class="user-type-wrapper">
-          <label class="section-label">Sign Up As:</label>
-          <div class="user-type-selection">
-            <label class="user-type">
-              <input type="radio" name="userType" value="customer" <?php echo ($oldRole !== 'repairshop') ? 'checked' : ''; ?> />
-              <span>Customer</span>
-            </label>
-            <label class="user-type">
-              <input type="radio" name="userType" value="repairshop" <?php echo ($oldRole === 'repairshop') ? 'checked' : ''; ?> />
-              <span>Repair Shop</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group" id="fullNameGroup" <?php echo ($oldRole === 'repairshop') ? 'style="display:none"' : ''; ?>>
-          <input type="text" id="fullName" name="fullName" placeholder="Full Name"
-            value="<?php echo htmlspecialchars($oldName); ?>"
-            <?php echo ($oldRole !== 'repairshop') ? 'required' : ''; ?>
-            <?php echo (!empty($error) && empty($oldName) && $oldRole !== 'repairshop') ? 'class="input-error"' : ''; ?> />
-        </div>
-
-        <div class="form-group" id="shopNameGroup" <?php echo ($oldRole !== 'repairshop') ? 'style="display:none"' : ''; ?>>
-          <input type="text" id="shopName" name="shopName" placeholder="Repair Shop Name"
-            value="<?php echo htmlspecialchars($oldShopName); ?>"
-            <?php echo ($oldRole === 'repairshop') ? 'required' : ''; ?>
-            <?php echo (!empty($error) && empty($oldShopName) && $oldRole === 'repairshop') ? 'class="input-error"' : ''; ?> />
-        </div>
-
-        <div class="form-group">
-          <input type="email" id="email" name="email" placeholder="Email address"
-            value="<?php echo htmlspecialchars($oldEmail); ?>" required
-            <?php echo (!empty($error) && empty($oldEmail)) ? 'class="input-error"' : ''; ?> />
-        </div>
-
-        <div class="form-group">
-          <div class="password-wrapper">
-            <input type="password" id="password" name="password" placeholder="Password" required
-              <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
-            <span class="toggle-password" onclick="togglePasswordVisibility('password')">
-              <svg id="eyeIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <svg id="eyeSlashIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <div class="password-wrapper">
-            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm Password" required
-              <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
-            <span class="toggle-password" onclick="togglePasswordVisibility('confirmPassword')">
-              <svg id="eyeIcon-confirmPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-              <svg id="eyeSlashIcon-confirmPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display:none">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        <div class="remember-me">
-          <input type="checkbox" id="terms" name="terms" required />
-          <label for="terms">I agree to the Terms & Conditions</label>
-        </div>
-
-        <button type="submit" class="sign-in-btn">Sign Up</button>
-        <div class="signup-link">Already have an account? <a href="login.php">Sign In</a></div>
-      </form>
-
-      <div class="footer">© 2026 All Rights Reserved. | FIX IT DAVAO</div>
     </div>
 
     <!-- ─── SUCCESS DIALOG (customer) ─── -->
@@ -320,7 +452,7 @@ $conn->close();
           <div class="dialog-header-title">Registration Submitted! ⏳</div>
         </div>
         <div class="dialog-body">
-          <div class="dialog-message" style="margin-bottom:12px;">Your shop <strong id="pendingShopName" style="color:#0f172a;"></strong> has been registered successfully.</div>
+          <div class="dialog-message" style="margin-bottom:12px;">Your shop <strong id="pendingShopName" style="color:#fbbf24;"></strong> has been registered successfully.</div>
           <div class="dialog-pending-note">
             🔍 <strong>Pending Admin Approval</strong><br>
             Your account is currently under review. You will be able to log in and access your dashboard once an admin approves your registration.<br><br>

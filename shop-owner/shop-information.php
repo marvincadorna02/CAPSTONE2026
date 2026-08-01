@@ -254,7 +254,7 @@ $saved = isset($_GET['saved']) && $_GET['saved'] == '1';
       </div>
     </aside>
 
-    <!-- Logout Modal -->
+<!-- Logout Modal -->
 <div class="modal-overlay" id="logoutModal">
   <div class="modal-box" style="max-width:380px; text-align:center;">
     <div style="font-size:48px; margin-bottom:12px;">👋</div>

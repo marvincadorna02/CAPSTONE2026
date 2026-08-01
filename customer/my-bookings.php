@@ -428,18 +428,18 @@ $_SESSION['last_activity'] = time();
         </div>
       </aside>
 
-      <!-- Logout Modal -->
-      <div class="modal-overlay" id="logoutModal">
-        <div class="modal-box" style="max-width:380px;text-align:center;padding:32px 28px;">
-          <div style="font-size:48px;margin-bottom:12px;">👋</div>
-          <div class="modal-title">Logging Out?</div>
-          <div class="modal-subtitle" style="margin-bottom:24px;">Are you sure you want to logout of Fix It Davao?</div>
-          <div class="modal-actions" style="justify-content:center;">
-            <button class="modal-btn-close" onclick="closeLogoutModal()">Cancel</button>
-            <button class="modal-btn-confirm" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="window.location.href='../logout.php'">Yes, Logout</button>
-          </div>
-        </div>
-      </div>
+    <!-- Logout Modal -->
+<div class="modal-overlay" id="logoutModal">
+  <div class="modal-box" style="max-width:380px; text-align:center;">
+    <div style="font-size:48px; margin-bottom:12px;">👋</div>
+    <div class="modal-title">Logging Out?</div>
+    <div class="modal-subtitle" style="margin-bottom:24px;">Are you sure you want to logout of Fix It Davao?</div>
+    <div class="modal-actions" style="justify-content:center;">
+      <button class="modal-btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+      <button class="modal-btn-confirm" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="window.location.href='../logout.php'">Yes, Logout</button>
+    </div>
+  </div>
+</div>
 
       <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">

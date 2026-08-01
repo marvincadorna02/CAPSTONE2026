@@ -462,7 +462,6 @@ $userInitials = strtoupper(substr($userName, 0, 2));
   </div>
 </div>
 
-
     <main class="main-content">
       <header class="top-bar">
         <div class="page-header">
