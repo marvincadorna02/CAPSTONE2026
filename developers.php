@@ -35,6 +35,15 @@ $userInitials = strtoupper(substr($userName, 0, 2));
     <link rel="stylesheet" href="assets/css/dashboard.css" />
     <link rel="stylesheet" href="assets/css/dashboard-mobile-additions.css" />
     <style>
+
+         /* ── PAGE LOAD ANIMATIONS (matches my-bookings.php / admin-dashboard.php) ── */
+      @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+      .top-bar            { animation: fadeInUp 0.4s ease both; }
+      .sub-status-banner  { animation: fadeInUp 0.45s ease both; }
+      .plans-grid         { animation: fadeInUp 0.5s ease both; }
+      .payment-section.show { animation: fadeInUp 0.35s ease; }
+      .pending-info-card  { animation: fadeInUp 0.5s ease both; }
+      .dash-card          { animation: fadeInUp 0.55s ease both; }
       .top-bar              { animation: fadeInUp 0.4s ease both; }
       .dev-hero             { animation: fadeInUp 0.5s ease both; }
       .developers-grid      { animation: fadeInUp 0.6s ease both; }

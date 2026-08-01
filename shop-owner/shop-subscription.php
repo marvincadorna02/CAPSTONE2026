@@ -159,9 +159,53 @@ if ($currentSub) {
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <style>
 
+   /* ── PAGE LOAD ANIMATIONS (matches my-bookings.php / admin-dashboard.php) ── */
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .top-bar            { animation: fadeInUp 0.4s ease both; }
+    .sub-status-banner  { animation: fadeInUp 0.45s ease both; }
+    .plans-grid         { animation: fadeInUp 0.5s ease both; }
+    .payment-section.show { animation: fadeInUp 0.35s ease; }
+    .pending-info-card  { animation: fadeInUp 0.5s ease both; }
+    .dash-card          { animation: fadeInUp 0.55s ease both; }
+
+
     /* ── Notif dropdown toggle ── */
-#notifDropdown { display: none; }
-#notifDropdown.open { display: block; }
+/* ── NOTIFICATIONS (matched to admin-dashboard.php, mobile-safe) ── */
+.notif-wrapper { position:relative; }
+.notif-badge {
+  position:absolute; top:-4px; right:-4px;
+  background:#ef4444; color:white; font-size:.6rem;
+  font-weight:700; min-width:18px; height:18px;
+  border-radius:20px; display:flex; align-items:center;
+  justify-content:center; padding:0 4px;
+  font-family:"Outfit",sans-serif; pointer-events:none;
+  border:2px solid white;
+}
+.notif-dropdown {
+  position:absolute; top:calc(100% + 10px); right:0;
+  width:320px; background:white; border-radius:16px;
+  border:1px solid #e2e8f0; box-shadow:0 20px 60px rgba(0,0,0,.18);
+  z-index:999; opacity:0; pointer-events:none;
+  transform:translateY(-8px) scale(0.97);
+  transition:opacity 0.22s ease, transform 0.22s ease;
+  overflow:hidden;
+}
+.notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+
+/* ← THIS is the missing piece causing the mobile overflow */
+@media (max-width: 768px) {
+  .notif-dropdown {
+    position: fixed !important;
+    top: 70px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 1200;
+  }
+}
     /* ── STATUS BANNER ── */
     .sub-status-banner {
       border-radius: 16px; padding: 1.4rem 1.6rem;

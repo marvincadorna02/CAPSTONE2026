@@ -113,16 +113,29 @@ $conn->close();
 }
 .modal-btn-confirm:hover { transform: translateY(-1px); opacity: 0.9; }
 
+/* ── NOTIFICATIONS (matched to admin-dashboard.php, mobile-safe) ── */
+.notif-wrapper { position:relative; }
+.notif-badge {
+  position:absolute; top:-4px; right:-4px;
+  background:#ef4444; color:white; font-size:.6rem;
+  font-weight:700; min-width:18px; height:18px;
+  border-radius:20px; display:flex; align-items:center;
+  justify-content:center; padding:0 4px;
+  font-family:"Outfit",sans-serif; pointer-events:none;
+  border:2px solid white;
+}
 .notif-dropdown {
   position:absolute; top:calc(100% + 10px); right:0;
   width:320px; background:white; border-radius:16px;
-  border:1.5px solid #e2e8f0; box-shadow:0 10px 40px rgba(0,0,0,.15);
-  z-index:500; display:none; overflow:hidden;
-  animation:fadeInUp .2s ease both;
+  border:1px solid #e2e8f0; box-shadow:0 20px 60px rgba(0,0,0,.18);
+  z-index:999; opacity:0; pointer-events:none;
+  transform:translateY(-8px) scale(0.97);
+  transition:opacity 0.22s ease, transform 0.22s ease;
+  overflow:hidden;
 }
-.notif-dropdown.open { display:block; }
+.notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
 
-/* ── Mobile fix ── */
+/* ← THIS is the missing piece causing the mobile overflow */
 @media (max-width: 768px) {
   .notif-dropdown {
     position: fixed !important;
@@ -133,7 +146,7 @@ $conn->close();
     max-width: 100% !important;
     max-height: 70vh;
     overflow-y: auto;
-    z-index: 600;
+    z-index: 1200;
   }
 }
     </style>
@@ -322,8 +335,8 @@ async function loadNotifications() {
       badge.style.display = 'none';
     }
 
-    if (!data.notifications || !data.notifications.length) {
-      list.innerHTML = '<div style="padding:1.5rem;text-align:center;font-size:.83rem;color:#94a3b8;"><img src="bell.svg" width="32" height="32" style="opacity:.3;display:block;margin:0 auto 8px;" />No notifications yet.</div>';
+      if (!data.notifications || !data.notifications.length) {
+      list.innerHTML = '<div style="padding:1.5rem;text-align:center;font-size:.83rem;color:#94a3b8;"><img src="../assets/icons/bell.svg" width="32" height="32" style="opacity:.3;display:block;margin:0 auto 8px;" />No notifications yet.</div>';
       return;
     }
 

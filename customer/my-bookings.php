@@ -35,25 +35,42 @@ $_SESSION['last_activity'] = time();
       <link rel="stylesheet" href="../assets/css/dashboard.css" />
       <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
       <style>
-        /* ── NOTIFICATIONS ── */
-  .notif-wrapper { position:relative; }
-  .notif-badge {
-    position:absolute; top:-4px; right:-4px;
-    background:#ef4444; color:white; font-size:.6rem;
-    font-weight:700; min-width:18px; height:18px;
-    border-radius:20px; display:flex; align-items:center;
-    justify-content:center; padding:0 4px;
-    font-family:"Outfit",sans-serif; pointer-events:none;
-    border:2px solid white;
-  }
+/* ── NOTIFICATIONS (matched to admin-dashboard.php, mobile-safe) ── */
+.notif-wrapper { position:relative; }
+.notif-badge {
+  position:absolute; top:-4px; right:-4px;
+  background:#ef4444; color:white; font-size:.6rem;
+  font-weight:700; min-width:18px; height:18px;
+  border-radius:20px; display:flex; align-items:center;
+  justify-content:center; padding:0 4px;
+  font-family:"Outfit",sans-serif; pointer-events:none;
+  border:2px solid white;
+}
+.notif-dropdown {
+  position:absolute; top:calc(100% + 10px); right:0;
+  width:320px; background:white; border-radius:16px;
+  border:1px solid #e2e8f0; box-shadow:0 20px 60px rgba(0,0,0,.18);
+  z-index:999; opacity:0; pointer-events:none;
+  transform:translateY(-8px) scale(0.97);
+  transition:opacity 0.22s ease, transform 0.22s ease;
+  overflow:hidden;
+}
+.notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+
+/* ← THIS is the missing piece causing the mobile overflow */
+@media (max-width: 768px) {
   .notif-dropdown {
-    position:absolute; top:calc(100% + 10px); right:0;
-    width:320px; background:white; border-radius:16px;
-    border:1.5px solid #e2e8f0; box-shadow:0 10px 40px rgba(0,0,0,.15);
-    z-index:500; display:none; overflow:hidden;
-    animation:fadeInUp .2s ease both;
+    position: fixed !important;
+    top: 70px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 1200;
   }
-  .notif-dropdown.open { display:block; }
+}
   .notif-header {
     display:flex; justify-content:space-between; align-items:center;
     padding:.75rem 1rem; border-bottom:1px solid #f1f5f9;
@@ -187,22 +204,22 @@ $_SESSION['last_activity'] = time();
         }
         .btn-find-shops:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(37,99,235,.4); }
 
-        /* ── DETAIL MODAL ── */
-        .modal-overlay {
-          position: fixed; inset: 0; background: rgba(10,15,30,.75);
-          backdrop-filter: blur(4px); display: flex; align-items: center;
-          justify-content: center; z-index: 1000; opacity: 0;
-          pointer-events: none; transition: opacity .3s ease; padding: 20px;
-        }
-        .modal-overlay.visible { opacity: 1; pointer-events: all; }
-        .modal-box {
-          background: white; border-radius: 22px; padding: 0;
-          max-width: 480px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,.28);
-          transform: scale(.9) translateY(20px); opacity: 0;
-          transition: transform .35s cubic-bezier(0.34,1.56,.64,1), opacity .3s ease;
-          overflow: hidden;
-        }
-        .modal-overlay.visible .modal-box { transform: scale(1) translateY(0); opacity: 1; }
+        /* ── DETAIL MODAL (renamed to avoid clash with logout/profile modal classes) ── */
+      .detail-modal-overlay {
+        position: fixed; inset: 0; background: rgba(10,15,30,.75);
+        backdrop-filter: blur(4px); display: flex; align-items: center;
+        justify-content: center; z-index: 1000; opacity: 0;
+        pointer-events: none; transition: opacity .3s ease; padding: 20px;
+      }
+      .detail-modal-overlay.visible { opacity: 1; pointer-events: all; }
+      .detail-modal-box {
+        background: white; border-radius: 22px; padding: 0;
+        max-width: 480px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,.28);
+        transform: scale(.9) translateY(20px); opacity: 0;
+        transition: transform .35s cubic-bezier(0.34,1.56,.64,1), opacity .3s ease;
+        overflow: hidden;
+      }
+      .detail-modal-overlay.visible .detail-modal-box { transform: scale(1) translateY(0); opacity: 1; }
         .modal-banner { padding: 1.25rem 1.5rem 1rem; display: flex; align-items: center; gap: 1rem; }
         .modal-shop-logo { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; border: 2px solid rgba(255,255,255,.4); flex-shrink: 0; }
         .modal-shop-name { font-size: 1.05rem; font-weight: 800; color: white; }
@@ -428,18 +445,20 @@ $_SESSION['last_activity'] = time();
         </div>
       </aside>
 
-    <!-- Logout Modal -->
-<div class="modal-overlay" id="logoutModal">
-  <div class="modal-box" style="max-width:380px; text-align:center;">
-    <div style="font-size:48px; margin-bottom:12px;">👋</div>
-    <div class="modal-title">Logging Out?</div>
-    <div class="modal-subtitle" style="margin-bottom:24px;">Are you sure you want to logout of Fix It Davao?</div>
-    <div class="modal-actions" style="justify-content:center;">
-      <button class="modal-btn-cancel" onclick="closeLogoutModal()">Cancel</button>
-      <button class="modal-btn-confirm" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="window.location.href='../logout.php'">Yes, Logout</button>
+<!-- ════════════════ LOGOUT MODAL ════════════════ -->
+  <div class="modal-overlay" id="logoutModal">
+    <div class="modal-box" style="max-width:360px;text-align:center;">
+      <div style="width:52px;height:52px;background:var(--brand-faint);border:1px solid #fde68a;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <div style="font-size:48px; margin-bottom:12px;">👋</div>
+      </div>
+      <div class="modal-title">Logging Out?</div>
+      <div class="modal-subtitle" style="margin-bottom:4px;">Are you sure you want to logout of Fix It Davao?</div>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+        <button class="modal-btn-confirm" style="background:linear-gradient(135deg,#ef4444,#dc2626);" onclick="window.location.href='../logout.php'">Yes, Logout</button>
+      </div>
     </div>
   </div>
-</div>
 
       <!-- PROFILE MODAL -->
 <div class="modal-overlay" id="profileModal">

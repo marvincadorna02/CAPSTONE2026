@@ -37,6 +37,7 @@ $avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($userName) . "&back
     <style>
 
       /* ── NOTIFICATIONS ── */
+/* ── NOTIFICATIONS (matched to admin-dashboard.php, mobile-safe) ── */
 .notif-wrapper { position:relative; }
 .notif-badge {
   position:absolute; top:-4px; right:-4px;
@@ -50,11 +51,28 @@ $avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($userName) . "&back
 .notif-dropdown {
   position:absolute; top:calc(100% + 10px); right:0;
   width:320px; background:white; border-radius:16px;
-  border:1.5px solid #e2e8f0; box-shadow:0 10px 40px rgba(0,0,0,.15);
-  z-index:500; display:none; overflow:hidden;
-  animation:fadeInUp .2s ease both;
+  border:1px solid #e2e8f0; box-shadow:0 20px 60px rgba(0,0,0,.18);
+  z-index:999; opacity:0; pointer-events:none;
+  transform:translateY(-8px) scale(0.97);
+  transition:opacity 0.22s ease, transform 0.22s ease;
+  overflow:hidden;
 }
-.notif-dropdown.open { display:block; }
+.notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+
+/* ← THIS is the missing piece causing the mobile overflow */
+@media (max-width: 768px) {
+  .notif-dropdown {
+    position: fixed !important;
+    top: 70px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 1200;
+  }
+}
 .notif-header {
   display:flex; justify-content:space-between; align-items:center;
   padding:.75rem 1rem; border-bottom:1px solid #f1f5f9;

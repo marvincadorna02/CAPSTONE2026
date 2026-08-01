@@ -389,7 +389,7 @@ $conn->close();
 
     <!-- AUTH CARD -->
     <div class="auth-wrap">
-      <div style="width:100%;max-width:460px;">
+      <div style="width:900%;max-width:960px;">
 
         <div class="auth-card">
           <h1>Welcome Back</h1>

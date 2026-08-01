@@ -39,8 +39,85 @@ $bodyClass = "role-{$userRole}";
   <link rel="stylesheet" href="../assets/css/dashboard.css" />
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="manifest" href="../manifest.json" />
+<link rel="manifest" href="../manifest.json" />
   <meta name="theme-color" content="#f59e0b" />
+  <style>
+    /* ── NOTIFICATIONS (matched exactly to admin-dashboard.php) ── */
+    .notif-wrapper { position:relative; }
+    .notification-btn { position:relative; }
+
+    .notif-badge {
+      position:absolute; top:-3px; right:-3px;
+      min-width:17px; height:17px; padding:0 4px;
+      background:#ef4444; color:white; border-radius:10px;
+      font-size:0.65rem; font-weight:800;
+      align-items:center; justify-content:center;
+      font-family:"Outfit",sans-serif; border:2px solid white;
+      line-height:1;
+    }
+
+    .notif-dropdown {
+      position:absolute; top:calc(100% + 10px); right:0;
+      width:320px; background:white; border-radius:16px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.18); border:1px solid #e2e8f0;
+      z-index:999; opacity:0; pointer-events:none;
+      transform:translateY(-8px) scale(0.97);
+      transition:opacity 0.22s ease, transform 0.22s ease;
+      overflow:hidden;
+    }
+    .notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+    @media (max-width: 768px) {
+      .notif-dropdown {
+        position: fixed !important;
+        top: 70px !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: 100% !important;
+        max-height: 70vh;
+        overflow-y: auto;
+        z-index: 1200;
+      }
+    }
+
+    .notif-header {
+      padding:14px 16px 10px; border-bottom:1px solid #f1f5f9;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .notif-header-title { font-size:0.88rem; font-weight:800; color:#0f172a; font-family:"Outfit",sans-serif; }
+    .notif-mark-read {
+      font-size:.72rem; font-weight:700; color:#f59e0b;
+      background:none; border:none; cursor:pointer;
+      font-family:"Outfit",sans-serif;
+      padding:3px 8px; border-radius:6px;
+      transition:background 0.2s ease, color 0.2s ease;
+    }
+    .notif-mark-read:hover { background:#fff7e6; color:#d97706; }
+
+    .notif-list { max-height:340px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
+    .notif-list::-webkit-scrollbar { width:4px; }
+    .notif-list::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
+
+    .notif-item {
+      display:flex; align-items:flex-start; gap:10px;
+      padding:11px 16px; border-bottom:1px solid #f8fafc;
+      transition:background 0.15s ease; cursor:pointer;
+    }
+    .notif-item:last-child { border-bottom:none; }
+    .notif-item:hover { background:#fafafa; }
+    .notif-item.unread { background:#fffbeb; }
+    .notif-item.unread:hover { background:#fef9e7; }
+
+    .notif-logo { width:34px; height:34px; border-radius:50%; object-fit:cover; flex-shrink:0; border:1px solid #e2e8f0; margin-top:1px; }
+    .notif-content { flex:1; min-width:0; }
+    .notif-message { font-size:0.8rem; font-weight:600; color:#0f172a; line-height:1.4; font-family:"Outfit",sans-serif; }
+    .notif-message span { font-weight:800; }
+    .notif-time { font-size:0.7rem; color:#94a3b8; margin-top:3px; }
+    .notif-dot { width:7px; height:7px; background:#f59e0b; border-radius:50%; flex-shrink:0; margin-top:6px; }
+
+    .notif-empty { text-align:center; padding:30px 20px; color:#94a3b8; font-size:0.82rem; font-family:"Outfit",sans-serif; }
+    .notif-loading { text-align:center; padding:24px 20px; font-size:0.82rem; color:#94a3b8; }
+  </style>
 </head>
 <body class="<?php echo $bodyClass; ?>">
 

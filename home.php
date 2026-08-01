@@ -25,6 +25,21 @@ $userRole = $_SESSION['role'] ?? 'customer';
 <link rel="icon" type="image/png" href="assets/images/logo.png" />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
+
+  .hero-image{
+    width:900%;
+    max-width:500px;
+    height:auto;
+    display:block;
+    margin-left:-60px;
+}
+
+.hero-visual{
+  position:absolute;right:10%;top:50%;transform:translate(-40px,-50%);
+  z-index:2;width:420px;
+  animation:fadeLeft 0.8s ease 0.3s both;
+}
+
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
   --primary:#0f172a;
@@ -417,39 +432,8 @@ html{
 
   <!-- Floating Card Preview -->
   <div class="hero-visual">
-    <div class="float-card" style="transform:rotate(-2deg);margin-right:20px;">
-      <div class="float-card-header">
-        <div class="shop-avatar">📱</div>
-        <div class="shop-meta">
-          <h4>Ken's Techshop Since 2026</h4>
-          <p>📍 Davao City</p>
-        </div>
-        <span class="badge-open">OPEN</span>
-      </div>
-      <div class="stars-row">★★★★★ <span style="color:rgba(255,255,255,0.4);font-size:11px;"> 4.9 (128 reviews)</span></div>
-      <div class="tag-row" style="margin-top:10px;">
-        <span class="tag">Phone Repair</span>
-        <span class="tag">Screen Replace</span>
-        <span class="tag">Battery</span>
-      </div>
-      <button class="book-btn-sm">Book Now →</button>
-    </div>
-    <div class="float-card" style="transform:rotate(1.5deg);margin-left:20px;">
-      <div class="float-card-header">
-        <div class="shop-avatar">💻</div>
-        <div class="shop-meta">
-          <h4>H & HW Repairshop</h4>
-          <p>📍 Bajada, Davao</p>
-        </div>
-        <span class="badge-open">OPEN</span>
-      </div>
-      <div class="stars-row">★★★★☆ <span style="color:rgba(255,255,255,0.4);font-size:11px;"> 4.6 (87 reviews)</span></div>
-      <div class="tag-row" style="margin-top:10px;">
-        <span class="tag">Laptop Repair</span>
-        <span class="tag">Data Recovery</span>
-      </div>
-      <button class="book-btn-sm">Book Now →</button>
-    </div>
+    <img src="assets/images/man.png" alt="Repair Illustration" class="hero-image">
+</div>
   </div>
 </section>
 

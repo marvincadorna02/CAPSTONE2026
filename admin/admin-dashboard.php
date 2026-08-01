@@ -30,6 +30,16 @@ $userInitials = strtoupper(substr($userName, 0, 2));
     <link rel="stylesheet" href="../assets/css/dashboard.css" />
     <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
     <style>
+
+       /* ── PAGE LOAD ANIMATIONS (matches my-bookings.php / admin-dashboard.php) ── */
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    .top-bar            { animation: fadeInUp 0.4s ease both; }
+    .sub-status-banner  { animation: fadeInUp 0.45s ease both; }
+    .plans-grid         { animation: fadeInUp 0.5s ease both; }
+    .payment-section.show { animation: fadeInUp 0.35s ease; }
+    .pending-info-card  { animation: fadeInUp 0.5s ease both; }
+    .dash-card          { animation: fadeInUp 0.55s ease both; }
+
       /* ── ANIMATIONS ── */
       @keyframes fadeInUp { from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)} }
       @keyframes countUp  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -399,6 +409,82 @@ $userInitials = strtoupper(substr($userName, 0, 2));
     font-size: 1.4rem !important;
   }
 }
+
+@media (max-width: 480px) {
+  .stats-grid-admin {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stat-value {
+    font-size: 1.4rem !important;
+  }
+}
+
+/* ── REGISTRATIONS SECTION ── */
+.reg-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.1rem; margin-bottom: 1.5rem; animation: fadeInUp 0.5s ease both;
+}
+.reg-summary-card {
+  background: white; border-radius: 16px; padding: 1.2rem 1.4rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid #f1f5f9;
+  display: flex; align-items: center; gap: 0.9rem;
+}
+.reg-summary-icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.3rem;
+}
+.reg-icon-customer { background: #dbeafe; }
+.reg-icon-shop      { background: #fef3c7; }
+.reg-icon-growth-c   { background: #ede9fe; }
+.reg-icon-growth-s   { background: #dcfce7; }
+.reg-summary-val   { font-size: 1.5rem; font-weight: 800; color: #0f172a; line-height: 1; font-family: 'Rajdhani', sans-serif; }
+.reg-summary-lbl   { font-size: 0.76rem; color: #64748b; font-weight: 500; margin-top: 2px; }
+
+.reg-controls {
+  display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap;
+  align-items: center; justify-content: space-between;
+}
+.reg-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.reg-tab-btn {
+  padding: 6px 14px; border-radius: 20px; border: 2px solid #e2e8f0;
+  background: white; font-size: 0.78rem; font-weight: 700; color: #64748b;
+  cursor: pointer; transition: all 0.2s; font-family: 'Outfit', sans-serif;
+}
+.reg-tab-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+.reg-tab-btn.active { background: #f59e0b; border-color: #f59e0b; color: white; }
+.reg-search {
+  padding: 8px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+  font-size: 0.82rem; font-family: 'Outfit', sans-serif; outline: none;
+  min-width: 220px; transition: border-color 0.2s;
+}
+.reg-search:focus { border-color: #f59e0b; }
+
+.reg-table-wrap { background: white; border-radius: 16px; border: 1px solid #f1f5f9; box-shadow: 0 2px 10px rgba(0,0,0,0.07); overflow: hidden; animation: fadeInUp 0.55s ease both; }
+.reg-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.reg-table th { padding: 10px 16px; text-align: left; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1.5px solid #f1f5f9; background: #f8fafc; }
+.reg-table td { padding: 11px 16px; border-bottom: 1px solid #f8fafc; color: #374151; }
+.reg-table tr:last-child td { border-bottom: none; }
+.reg-role-pill { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+.reg-role-customer  { background: #dbeafe; color: #1e40af; }
+.reg-role-repairshop{ background: #fef3c7; color: #92400e; }
+.reg-status-pill { padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+.reg-status-active   { background: #d1fae5; color: #065f46; }
+.reg-status-suspended{ background: #fee2e2; color: #991b1b; }
+.reg-status-pending  { background: #fef3c7; color: #92400e; }
+.reg-status-approved { background: #d1fae5; color: #065f46; }
+.reg-status-rejected { background: #f1f5f9; color: #64748b; }
+.reg-empty { text-align: center; padding: 40px 20px; color: #94a3b8; font-size: 0.85rem; }
+
+@media (max-width: 768px) {
+  .reg-table-wrap { overflow-x: auto; }
+  .reg-table { min-width: 620px; }
+  .reg-controls { flex-direction: column; align-items: stretch; }
+  .reg-search { width: 100%; }
+}
+    </style>
     </style>
     <link rel="manifest" href="../manifest.json" />
 <meta name="theme-color" content="#f59e0b">
@@ -615,7 +701,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
           </a>
         </div>
 
-        <!-- ── BOTTOM SUMMARY ── -->
+       <!-- ── BOTTOM SUMMARY ── -->
         <div class="bottom-grid">
           <div class="summary-stat">
             <div class="big" id="sumApprovalRate">—%</div>
@@ -633,6 +719,67 @@ $userInitials = strtoupper(substr($userName, 0, 2));
             <div class="bar-bg"><div class="bar-fg" id="barRejected" style="background:#ef4444;width:0%"></div></div>
           </div>
         </div>
+
+        <!-- ── ALL REGISTRATIONS ── -->
+        <h2 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 0.85rem">All Registrations</h2>
+
+        <div class="reg-summary-grid">
+          <div class="reg-summary-card">
+  <div class="reg-summary-icon reg-icon-customer"><img src="../assets/icons/user.svg" alt="Customers" width="22" height="22" /></div>
+  <div>
+    <div class="reg-summary-val" id="regTotalCustomers">—</div>
+    <div class="reg-summary-lbl">Total Customers</div>
+  </div>
+</div>
+<div class="reg-summary-card">
+  <div class="reg-summary-icon reg-icon-shop"><img src="../assets/icons/store.svg" alt="Shop Owners" width="22" height="22" /></div>
+  <div>
+    <div class="reg-summary-val" id="regTotalShops">—</div>
+    <div class="reg-summary-lbl">Total Shop Owners</div>
+  </div>
+</div>
+<div class="reg-summary-card">
+  <div class="reg-summary-icon reg-icon-growth-c"><img src="../assets/icons/bar.svg" alt="Growth" width="22" height="22" /></div>
+  <div>
+    <div class="reg-summary-val" id="regMonthCustomers">—</div>
+    <div class="reg-summary-lbl">New Customers (This Month)</div>
+  </div>
+</div>
+<div class="reg-summary-card">
+  <div class="reg-summary-icon reg-icon-growth-s"><img src="../assets/icons/bar.svg" alt="Growth" width="22" height="22" /></div>
+  <div>
+    <div class="reg-summary-val" id="regMonthShops">—</div>
+    <div class="reg-summary-lbl">New Shop Owners (This Month)</div>
+  </div>
+</div>
+</div>
+        <div class="reg-controls">
+          <div class="reg-tabs">
+            <button class="reg-tab-btn active" data-role="all">All</button>
+            <button class="reg-tab-btn" data-role="customer">Customers</button>
+            <button class="reg-tab-btn" data-role="repairshop">Shop Owners</button>
+          </div>
+          <input type="text" class="reg-search" id="regSearch" placeholder="Search by name or email…" />
+        </div>
+
+        <div class="reg-table-wrap">
+          <table class="reg-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Registered</th>
+              </tr>
+            </thead>
+            <tbody id="regTableBody">
+              <tr><td colspan="5" class="reg-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
 
       </div>
       <footer class="dashboard-footer">© 2026 All Rights Reserved. | FIX IT DAVAO</footer>
@@ -959,7 +1106,7 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
       loadDashboard();
       setInterval(loadDashboard, 30000); // auto-refresh every 30s
 
- function confirmLogout(e) {
+function confirmLogout(e) {
   e.preventDefault();
   sidebar.classList.remove('active');
   document.body.classList.remove('sidebar-open');
@@ -969,6 +1116,89 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
 function closeLogoutModal() {
   document.getElementById('logoutModal').classList.remove('visible');
 }
+
+// ── ALL REGISTRATIONS ─────────────────────────────────────
+let allRegistrations = [];
+let regRoleFilter     = 'all';
+let regSearchQuery    = '';
+
+function fmtRegDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' });
+}
+
+function renderRegistrations() {
+  const tbody = document.getElementById('regTableBody');
+  let filtered = allRegistrations;
+
+  if (regRoleFilter !== 'all') {
+    filtered = filtered.filter(u => u.role === regRoleFilter);
+  }
+  if (regSearchQuery) {
+    filtered = filtered.filter(u =>
+      u.name.toLowerCase().includes(regSearchQuery) ||
+      u.email.toLowerCase().includes(regSearchQuery)
+    );
+  }
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="reg-empty">No registrations found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(u => {
+    const roleLabel  = u.role === 'repairshop' ? 'Repair Shop' : 'Customer';
+    const statusText = u.role === 'repairshop' ? (u.approval_status || 'approved') : (u.status || 'active');
+    const statusCls  = `reg-status-${statusText}`;
+    return `
+      <tr>
+        <td><strong>${escapeHtml(u.name)}</strong></td>
+        <td>${escapeHtml(u.email)}</td>
+        <td><span class="reg-role-pill reg-role-${u.role}">${roleLabel}</span></td>
+        <td><span class="reg-status-pill ${statusCls}">${statusText.charAt(0).toUpperCase() + statusText.slice(1)}</span></td>
+        <td>${fmtRegDate(u.created_at)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadRegistrations() {
+  try {
+    const res  = await fetch('../api/get_all_registrations.php');
+    const data = await res.json();
+    if (!data.success) throw new Error('Failed');
+
+    allRegistrations = data.users || [];
+
+    document.getElementById('regTotalCustomers').textContent = data.totalCustomers;
+    document.getElementById('regTotalShops').textContent     = data.totalShops;
+    document.getElementById('regMonthCustomers').textContent = '+' + data.thisMonthCustomers;
+    document.getElementById('regMonthShops').textContent     = '+' + data.thisMonthShops;
+
+    renderRegistrations();
+  } catch(e) {
+    document.getElementById('regTableBody').innerHTML =
+      `<tr><td colspan="5" class="reg-empty" style="color:#ef4444">Failed to load registrations.</td></tr>`;
+  }
+}
+
+document.querySelectorAll('.reg-tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.reg-tab-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    regRoleFilter = this.dataset.role;
+    renderRegistrations();
+  });
+});
+
+document.getElementById('regSearch').addEventListener('input', function() {
+  regSearchQuery = this.value.toLowerCase().trim();
+  renderRegistrations();
+});
+
+loadRegistrations();
 
 // ── Donut chart instance ───────────────────────────────
 let statusChart = null;
