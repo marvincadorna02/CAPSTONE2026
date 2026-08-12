@@ -368,6 +368,24 @@ if ($currentSub) {
       .gcash-info-box { flex-direction: column; text-align: center; }
       .gcash-info-box .gcash-amount { text-align: center; }
     }
+
+/* ── Sidebar backdrop (para ma-close pag click outside) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 900; /* ubos sa sidebar pero taas sa content */
+}
+body.sidebar-open .sidebar-backdrop {
+  display: block;
+}
+
+.sidebar {
+  z-index: 950; /* mas taas kaysa backdrop (900) */
+}
+
+
   </style>
 </head>
 <body class="role-repairshop">
@@ -466,7 +484,7 @@ if ($currentSub) {
 
       <?php if ($msg): ?>
       <div class="alert alert-<?php echo $msgType; ?>">
-        <?php echo $msgType === 'success' ? '✅' : '❌'; ?>
+        <?php echo $msgType === 'success' ? '<img src="../assets/icons/approve.svg" width="16" height="16" style="vertical-align:middle;">' : '<img src="../assets/icons/suspend.svg" width="16" height="16" style="vertical-align:middle;">'; ?>
         <?php echo htmlspecialchars($msg); ?>
       </div>
       <?php endif; ?>
@@ -474,7 +492,7 @@ if ($currentSub) {
       <!-- ── STATUS BANNER ── -->
       <?php if ($isActive): ?>
       <div class="sub-status-banner banner-active">
-        <div class="banner-icon">✅</div>
+        <div class="banner-icon"><img src="../assets/icons/approve.svg" width="30" height="30"></div>
         <div class="banner-info">
           <div class="banner-title"><?php echo htmlspecialchars($currentSub['plan_name']); ?> Plan — Active</div>
           <div class="banner-sub">
@@ -486,7 +504,7 @@ if ($currentSub) {
       </div>
       <?php elseif ($isPending): ?>
       <div class="sub-status-banner banner-pending">
-        <div class="banner-icon">⏳</div>
+        <div class="banner-icon"><img src="../assets/icons/glass.svg" width="30" height="30"></div>
         <div class="banner-info">
           <div class="banner-title">Payment Under Review</div>
           <div class="banner-sub">Your <?php echo htmlspecialchars($currentSub['plan_name']); ?> plan payment is being verified by admin.</div>
@@ -504,7 +522,7 @@ if ($currentSub) {
       </div>
       <?php elseif ($currentSub && $currentSub['status'] === 'rejected'): ?>
       <div class="sub-status-banner banner-expired">
-        <div class="banner-icon">❌</div>
+        <div class="banner-icon"><img src="../assets/icons/suspend.svg" width="30" height="30"></div>
         <div class="banner-info">
           <div class="banner-title">Payment Rejected</div>
           <div class="banner-sub">
@@ -515,7 +533,7 @@ if ($currentSub) {
       </div>
       <?php else: ?>
       <div class="sub-status-banner banner-none">
-        <div class="banner-icon">🔒</div>
+        <div class="banner-icon"><img src="../assets/icons/lock.svg" width="30" height="30"></div>
         <div class="banner-info">
           <div class="banner-title">No Active Subscription</div>
           <div class="banner-sub">Subscribe to access all Fix It Davao platform features.</div>
@@ -527,7 +545,7 @@ if ($currentSub) {
       <?php if ($isPending): ?>
       <!-- ── PENDING WAITING STATE ── -->
       <div class="pending-info-card">
-        <div class="pi-icon">🕐</div>
+        <div class="pi-icon"><img src="../assets/icons/glass.svg" width="40" height="40"></div>
         <h3>Waiting for Admin Approval</h3>
         <p>Your payment for the <strong><?php echo htmlspecialchars($currentSub['plan_name']); ?> Plan (₱<?php echo number_format($currentSub['price'], 2); ?>)</strong> is currently under review.<br>
         Admin will verify your GCash screenshot and activate your subscription shortly.<br><br>
@@ -549,7 +567,7 @@ if ($currentSub) {
           <?php foreach ($plans as $i => $plan): ?>
           <div class="plan-card <?php echo $i === 1 ? 'popular' : ''; ?>" onclick="selectPlan(<?php echo $plan['id']; ?>, <?php echo $plan['price']; ?>, '<?php echo addslashes($plan['name']); ?>')">
             <?php if ($i === 1): ?>
-            <div class="plan-popular-tag">⭐ Most Popular</div>
+            <div class="plan-popular-tag"><img src="../assets/icons/shine.svg" width="12" height="12" style="filter:brightness(0) invert(1);vertical-align:middle;margin-right:3px;"> Most Popular</div>
             <?php endif; ?>
             <div class="plan-check">
               <svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#10b981"/><polyline points="7,12 10.5,15.5 17,9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
@@ -566,24 +584,24 @@ if ($currentSub) {
 
         <!-- ── PAYMENT FORM ── -->
         <div class="payment-section" id="paymentSection">
-      <div class="section-label">💳 Payment Details</div>
+      <div class="section-label"><img src="../assets/icons/credit.svg" width="18" height="18"> Payment Details</div>
 
       <!-- Payment method tabs -->
       <div class="payment-method-tabs" style="display:flex;gap:8px;margin-bottom:1.2rem;">
         <button type="button" class="pm-tab active" data-method="gcash" onclick="switchPaymentMethod('gcash', this)"
           style="flex:1;padding:10px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;color:#d97706;font-weight:700;font-size:.85rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;">
-          💚 GCash
+          <img src="../assets/icons/gcash.svg" width="16" height="16" style="vertical-align:middle;margin-right:4px;"> GCash
         </button>
         <button type="button" class="pm-tab" data-method="bank" onclick="switchPaymentMethod('bank', this)"
           style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:10px;background:white;color:#64748b;font-weight:700;font-size:.85rem;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .2s;">
-          🏦 Bank Transfer
+          <img src="../assets/icons/bank.svg" width="16" height="16" style="vertical-align:middle;margin-right:4px;"> Bank Transfer
         </button>
       </div>
       <input type="hidden" name="payment_method" id="paymentMethod" value="gcash" />
 
       <!-- GCash info box -->
       <div class="gcash-info-box" id="gcashInfoBox">
-        <div class="gcash-logo">💚</div>
+        <div class="gcash-logo"><img src="../assets/icons/gcash.svg" width="32" height="32"></div>
         <div class="gcash-details">
           <div class="gcash-number">0917-123-4567</div>
           <div class="gcash-name">Fix It Davao Admin</div>
@@ -605,7 +623,7 @@ if ($currentSub) {
     </select>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <div class="gcash-logo">🏦</div>
+    <div class="gcash-logo"><img src="../assets/icons/bank.svg" width="32" height="32"></div>
     <div class="gcash-details">
       <div class="gcash-number" id="bankAccountNumber" style="font-size:1rem;">BDO — 001234567890</div>
       <div class="gcash-name" id="bankAccountName">Fix It Davao Corp.</div>
@@ -631,14 +649,14 @@ if ($currentSub) {
         <label id="screenshotLabel">Upload GCash Screenshot *</label>
         <div class="upload-area" id="uploadArea">
           <input type="file" name="gcash_screenshot" accept="image/*" id="screenshotInput" onchange="previewScreenshot(this)" required />
-          <div class="upload-icon">📸</div>
+          <div class="upload-icon"><img src="../assets/icons/upload.svg" width="32" height="32"></div>
           <p id="uploadHint">Click to upload your GCash payment screenshot</p>
           <img id="screenshotPreview" class="upload-preview" alt="Screenshot preview" />
         </div>
       </div>
 
       <button type="submit" class="btn-submit-sub" id="submitBtn">
-        🚀 Submit Subscription Request
+        <img src="../assets/icons/upload.svg" width="16" height="16" style="filter:brightness(0) invert(1);vertical-align:middle;margin-right:6px;"> Submit Subscription Request
       </button>
       <p style="font-size:.75rem;color:#94a3b8;text-align:center;margin-top:8px;">
         Admin will verify your payment within 24 hours.
@@ -666,7 +684,7 @@ if ($currentSub) {
       ?>
       <?php if (!empty($history)): ?>
       <div class="dash-card">
-        <div style="font-size:.95rem;font-weight:800;color:#0f172a;margin:0 0 1rem;font-family:'Outfit',sans-serif;">📋 Subscription History</div>
+        <div style="font-size:.95rem;font-weight:800;color:#0f172a;margin:0 0 1rem;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:8px;"><img src="../assets/icons/receipt.svg" width="18" height="18"> Subscription History</div>
         <div style="overflow-x:auto;">
           <table class="history-table">
             <thead>
@@ -687,8 +705,8 @@ if ($currentSub) {
               <td>₱<?php echo number_format($h['price'], 2); ?></td>
               <td>
                 <?php echo $h['payment_method'] === 'bank'
-                  ? '🏦 ' . strtoupper($h['bank_name'] ?: 'Bank')
-                  : '💚 GCash'; ?>
+  ? '<img src="../assets/icons/bank.svg" width="14" height="14" style="vertical-align:middle;margin-right:4px;">' . strtoupper($h['bank_name'] ?: 'Bank')
+  : '<img src="../assets/icons/gcash.svg" width="14" height="14" style="vertical-align:middle;margin-right:4px;">GCash'; ?>
               </td>
               <td><?php echo $h['start_date'] ? date('M j, Y', strtotime($h['start_date'])) : '—'; ?></td>
               <td><?php echo $h['end_date']   ? date('M j, Y', strtotime($h['end_date']))   : '—'; ?></td>

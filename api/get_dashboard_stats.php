@@ -114,6 +114,31 @@ $dailyRegistrations = [];
 while ($row = $dailyResult->fetch_assoc()) {
     $dailyRegistrations[] = $row;
 }
+
+// ── Expiring / expired subscriptions (within 7 days or already past) ──
+$expiringRes = $conn->query("
+    SELECT u.name, u.shop_name, ss.end_date
+    FROM shop_subscriptions ss
+    JOIN users u ON ss.shop_id = u.id
+    WHERE ss.status = 'active'
+      AND ss.end_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+    ORDER BY ss.end_date ASC
+    LIMIT 8
+");
+while ($row = $expiringRes->fetch_assoc()) {
+    $isExpired = strtotime($row['end_date']) < strtotime('today');
+    $recentActivity[] = [
+        'type'  => $isExpired ? 'expired' : 'expiring',
+        'label' => $isExpired ? 'Subscription Expired' : 'Subscription Expiring Soon',
+        'name'  => ($row['shop_name'] ?: $row['name']) . ' — ' . ($isExpired ? 'expired' : 'ends') . ' ' . date('M j', strtotime($row['end_date'])),
+        'time'  => $row['end_date'],
+    ];
+}
+
+// Re-sort combined activity by time, newest first, keep top 10
+usort($recentActivity, fn($a, $b) => strtotime($b['time']) - strtotime($a['time']));
+$recentActivity = array_slice($recentActivity, 0, 10);
+
 $conn->close();
 
 echo json_encode([

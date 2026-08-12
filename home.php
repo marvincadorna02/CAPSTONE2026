@@ -362,6 +362,27 @@ html{
   scrollbar-gutter: stable;
 }
 
+/* ── Scroll zoom reveal ── */
+.step-card, .feature-card, .shop-prev-card {
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1), border-color 0.3s, box-shadow 0.3s;
+}
+
+/* ── Hero image zoom on scroll ── */
+.hero-visual {
+  transition: transform 0.1s linear;
+  will-change: transform;
+}
+
+/* ── Section title zoom-in reveal ── */
+.section-header {
+  opacity: 0;
+  transform: scale(0.92) translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.section-header.revealed {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
 </style>
 </head>
 <body>
@@ -379,7 +400,16 @@ html{
   </div>
   <div class="nav-cta">
 <?php if($isLoggedIn): ?>
-    <a href="shop-owner/dashboard.php" class="btn-login">Dashboard</a>
+    <?php
+  if ($userRole === 'admin') {
+      $dashboardUrl = 'admin/admin-dashboard.php';
+  } elseif ($userRole === 'repairshop') {
+      $dashboardUrl = 'shop-owner/shop-information.php';
+  } else {
+      $dashboardUrl = 'shop-owner/dashboard.php';
+  }
+?>
+    <a href="<?php echo $dashboardUrl; ?>" class="btn-login">Dashboard</a>
     <a href="logout.php" class="btn-register">Logout</a>
 <?php else: ?>
     <a href="login.php" class="btn-login" onclick="return openAuthModal('login.php', event)">Log In</a>
@@ -402,7 +432,7 @@ html{
     <p class="hero-sub">Book phone, laptop, appliance, and gadget repairs in minutes. Connect with verified local repair shops — fast, reliable, and hassle-free.</p>
 <div class="hero-actions">
 <?php if($isLoggedIn): ?>
-    <a href="shop-owner/dashboard.php" class="btn-hero-primary">
+    <a href="<?php echo $dashboardUrl; ?>" class="btn-hero-primary">
       <img src="assets/icons/tools.svg" style="width:18px;height:18px;filter:brightness(0) invert(1);"> Go to Dashboard
     </a>
 <?php else: ?>
@@ -521,12 +551,12 @@ html{
   </div>
   <div class="shops-preview">
     <div class="shop-prev-card">
-      <div class="shop-prev-logo">📱</div>
+      <div class="shop-prev-logo"><img src="assets/icons/mobile.svg" style="width:26px;height:26px;"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span class="shop-prev-name">Blingue Tech Solutions</span>
-        <span class="badge-featured">⭐ FEATURED</span>
+        <span class="badge-featured"><img src="assets/icons/shine.svg" style="width:11px;height:11px;filter:brightness(0) invert(1);vertical-align:middle;margin-right:3px;"> FEATURED</span>
       </div>
-      <div class="shop-prev-loc">📍 Davao City</div>
+      <div class="shop-prev-loc"><img src="assets/icons/location.svg" style="width:12px;height:12px;opacity:0.6;vertical-align:middle;margin-right:3px;"> Davao City</div>
       <div class="shop-prev-stars">★★★★★ 4.9</div>
       <div class="shop-prev-tags">
         <span class="shop-prev-tag">Phone Repair</span>
@@ -535,12 +565,12 @@ html{
       </div>
     </div>
     <div class="shop-prev-card">
-      <div class="shop-prev-logo">💻</div>
+      <div class="shop-prev-logo"><img src="assets/icons/laptop.svg" style="width:26px;height:26px;"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span class="shop-prev-name">TechFix Davao</span>
-        <span class="badge-featured">⭐ FEATURED</span>
+        <span class="badge-featured"><img src="assets/icons/shine.svg" style="width:11px;height:11px;filter:brightness(0) invert(1);vertical-align:middle;margin-right:3px;"> FEATURED</span>
       </div>
-      <div class="shop-prev-loc">📍 Bajada</div>
+      <div class="shop-prev-loc"><img src="assets/icons/location.svg" style="width:12px;height:12px;opacity:0.6;vertical-align:middle;margin-right:3px;"> Bajada</div>
       <div class="shop-prev-stars">★★★★☆ 4.6</div>
       <div class="shop-prev-tags">
         <span class="shop-prev-tag">Laptop</span>
@@ -549,9 +579,9 @@ html{
       </div>
     </div>
     <div class="shop-prev-card">
-      <div class="shop-prev-logo">🔧</div>
+      <div class="shop-prev-logo"><img src="assets/icons/laptop.svg" style="width:26px;height:26px;"></div>
       <span class="shop-prev-name">Gadget Hub Davao</span>
-      <div class="shop-prev-loc">📍 Buhangin</div>
+      <div class="shop-prev-loc"><img src="assets/icons/location.svg" style="width:12px;height:12px;opacity:0.6;vertical-align:middle;margin-right:3px;"> Buhangin</div>
       <div class="shop-prev-stars">★★★★☆ 4.5</div>
       <div class="shop-prev-tags">
         <span class="shop-prev-tag">Appliance</span>
@@ -568,8 +598,12 @@ html{
   <h2>Ready to Get Your Device Fixed?</h2>
   <p>Join hundreds of Davao customers already using Fix It Davao.</p>
   <div class="cta-actions">
-    <a href="login.php" class="btn-hero-primary" style="font-size:15px;" onclick="return openAuthModal('login.php', event)">🔧 Find a Shop Now</a>
-    <a href="signup.php?role=shop" class="btn-hero-secondary" style="font-size:15px;" onclick="return openAuthModal('signup.php?role=shop', event)">🏪 List Your Shop</a>
+    <a href="login.php" class="btn-hero-primary" style="font-size:15px;" onclick="return openAuthModal('login.php', event)">
+  <img src="assets/icons/tools.svg" style="width:16px;height:16px;filter:brightness(0) invert(1);vertical-align:middle;margin-right:6px;"> Find a Shop Now
+</a>
+    <a href="signup.php?role=shop" class="btn-hero-secondary" style="font-size:15px;" onclick="return openAuthModal('signup.php?role=shop', event)">
+  <img src="assets/icons/store.svg" style="width:16px;height:16px;filter:brightness(0) invert(1);vertical-align:middle;margin-right:6px;"> List Your Shop
+</a>
   </div>
 </section>
 
@@ -593,7 +627,6 @@ html{
   </div>
   <div class="footer-bottom">
     <span class="footer-copy">© 2025 Fix It Davao. All rights reserved.</span>
-    <span class="footer-davao">Made with 🧡 in Davao City, Philippines</span>
   </div>
 </footer>
 
@@ -606,36 +639,84 @@ html{
 </div>
 
 <script>
-// Smooth reveal on scroll
+// ── Scroll zoom reveal (REPLACE sa naa nang observer) ──
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(e => {
     if(e.isIntersecting){
       e.target.style.opacity = '1';
-      e.target.style.transform = 'translateY(0)';
+      e.target.style.transform = 'scale(1) translateY(0)';
     }
   });
 }, {threshold: 0.1});
 
-document.querySelectorAll('.step-card, .feature-card, .shop-prev-card').forEach(el => {
+document.querySelectorAll('.step-card, .feature-card, .shop-prev-card').forEach((el, i) => {
   el.style.opacity = '0';
-  el.style.transform = 'translateY(20px)';
-  el.style.transition = 'opacity 0.5s ease, transform 0.5s ease, border-color 0.3s, box-shadow 0.3s';
+  el.style.transform = 'scale(0.88) translateY(24px)';
+  el.style.transitionDelay = `${(i % 3) * 0.08}s`;
   observer.observe(el);
 });
 
-// Navbar scroll effect
+// ── Section headers zoom-in ──
+const headerObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('revealed');
+  });
+}, { threshold: 0.2 });
+document.querySelectorAll('.section-header').forEach(el => headerObserver.observe(el));
+
+// ── Hero parallax zoom on scroll ──
+const heroImg = document.querySelector('.hero-image');
 window.addEventListener('scroll', () => {
-  const nav = document.querySelector('.navbar');
-  if(window.scrollY > 50){
-    nav.style.background = 'rgba(2,6,23,0.97)';
-    nav.style.boxShadow = '0 4px 20px rgba(0,0,0,0.3)';
-  } else {
-    nav.style.background = 'rgba(2,6,23,0.92)';
-    nav.style.boxShadow = 'none';
+  const scrolled = window.scrollY;
+  const heroHeight = document.querySelector('.hero').offsetHeight;
+  const progress = Math.min(scrolled / heroHeight, 1);
+  if (heroImg) {
+    heroImg.style.transform = `scale(${1 + progress * 0.15}) translateY(${progress * 30}px)`;
+    heroImg.style.opacity = 1 - progress * 0.6;
   }
+// background grid parallax (slower move = depth)
+  const grid = document.querySelector('.hero-bg-grid');
+  if (grid) grid.style.transform = `translateY(${scrolled * 0.15}px)`;
 });
+
+// ── Animated stat counters ──
+function animateCounter(el, target, decimals = 0) {
+  let start = 0;
+  const duration = 1400;
+  const startTime = performance.now();
+  function tick(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = start + (target - start) * eased;
+    el.textContent = decimals > 0 ? value.toFixed(decimals) : Math.floor(value);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+const statObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const nums = entry.target.querySelectorAll('.stat-num');
+      const targets = [50, 500, 4.8];
+      const decimals = [0, 0, 1];
+      nums.forEach((el, i) => {
+        const suffix = el.querySelector('span');
+        const suffixHtml = suffix ? suffix.outerHTML : '';
+        animateCounter(el, targets[i], decimals[i]);
+        setTimeout(() => {
+          el.innerHTML = (decimals[i] > 0 ? targets[i].toFixed(decimals[i]) : targets[i]) + suffixHtml;
+        }, 1450);
+      });
+      statObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+const heroStats = document.querySelector('.hero-stats');
+if (heroStats) statObserver.observe(heroStats);
 </script>
- <script>
+<script>
 setTimeout(function () {
     window.location.href = "login.php?timeout=1";
 }, 1800000); // 30 minutes
@@ -682,6 +763,17 @@ function closeAuthModal() {
 
 authClose.addEventListener('click', closeAuthModal);
 authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) closeAuthModal(); });
+
+// ── Switch between login/signup/forgot-password inside modal ──
+window.addEventListener('message', (e) => {
+  console.log('Received message:', e.data); // temporary debug
+  if (e.data === 'switch-to-forgot') {
+    authFrame.src = 'forgot-password.php';
+  }
+  if (e.data === 'switch-to-login') {
+    authFrame.src = 'login.php';
+  }
+});
 </script>
 </body>
 </html>

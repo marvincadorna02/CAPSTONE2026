@@ -419,6 +419,23 @@ $_SESSION['last_activity'] = time();
 }
 .cancel-modal-btn-yes:hover { transform:translateY(-1px); }
 .cancel-modal-btn-yes:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+
+/* ── Sidebar backdrop (para ma-close pag click outside) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 900; /* ubos sa sidebar pero taas sa content */
+}
+body.sidebar-open .sidebar-backdrop {
+  display: block;
+}
+
+.sidebar {
+  z-index: 950; /* mas taas kaysa backdrop (900) */
+}
+
       </style>
     </head>
     <body class="role-customer">

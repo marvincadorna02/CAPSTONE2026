@@ -484,6 +484,24 @@ $userInitials = strtoupper(substr($userName, 0, 2));
   .reg-controls { flex-direction: column; align-items: stretch; }
   .reg-search { width: 100%; }
 }
+
+/* ── Sidebar backdrop (para ma-close pag click outside) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 900; /* ubos sa sidebar pero taas sa content */
+}
+body.sidebar-open .sidebar-backdrop {
+  display: block;
+}
+
+.sidebar {
+  z-index: 950; /* mas taas kaysa backdrop (900) */
+}
+
+
     </style>
     </style>
     <link rel="manifest" href="../manifest.json" />
@@ -843,6 +861,16 @@ $userInitials = strtoupper(substr($userName, 0, 2));
           icon: `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#8b5cf6"/><circle cx="12" cy="9" r="3" fill="white"/><path d="M6.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
           label:"New User Registered"
         },
+        expired: {
+          cls:  "dot-rejected",
+          icon: `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#ef4444"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+          label:"Subscription Expired"
+        },
+        expiring: {
+          cls:  "dot-pending",
+          icon: `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><path d="M12 7v5l3 2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
+          label:"Subscription Expiring Soon"
+        },
       };
 
       // ── Chart instance ────────────────────────────────────────
@@ -999,6 +1027,8 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
         rejected: { svg:`<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#ef4444"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>` },
         pending:  { svg:`<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><rect x="9" y="7" width="2" height="6" rx="1" fill="white"/><rect x="13" y="7" width="2" height="6" rx="1" fill="white"/><rect x="8" y="15" width="8" height="2" rx="1" fill="white"/></svg>` },
         user:     { svg:`<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#8b5cf6"/><circle cx="12" cy="9" r="3" fill="white"/><path d="M6.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/></svg>` },
+        expired:  { svg:`<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#ef4444"/><line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>` },
+        expiring: { svg:`<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><path d="M12 7v5l3 2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>` },
       };
 
       const notifLabels = {
@@ -1006,6 +1036,8 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
         rejected: "Shop Rejected",
         pending:  "New Shop Registered",
         user:     "New User Registered",
+        expired:  "Subscription Expired",
+        expiring: "Subscription Expiring Soon",
       };
 
       function timeAgoShort(dateStr) {

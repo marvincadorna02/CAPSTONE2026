@@ -129,6 +129,16 @@ $pendingResult = $conn->query("
 ");
 $pending = $pendingResult->fetch_all(MYSQLI_ASSOC);
 
+// ── Build notification list from pending subscriptions ─────────
+$notifItems = array_map(function($p) {
+    return [
+        'id'    => 'sub_' . $p['id'],
+        'title' => 'New Subscription Payment',
+        'name'  => ($p['shop_name'] ?: $p['shop_owner']) . ' — ₱' . number_format($p['price'], 2),
+        'time'  => $p['created_at'],
+    ];
+}, $pending);
+
 // ── Load all subscriptions ────────────────────────────────────
 $allResult = $conn->query("
     SELECT ss.*, sp.name AS plan_name, sp.price,
@@ -167,6 +177,88 @@ $conn->close();
   <link rel="stylesheet" href="../assets/css/dashboard.css" />
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <style>
+
+    /* ── NOTIFICATION BELL (from admin-dashboard.php) ── */
+    .notif-wrapper { position:relative; }
+    .notification-btn { position:relative; }
+    .notif-badge {
+      position:absolute; top:-3px; right:-3px;
+      min-width:17px; height:17px; padding:0 4px;
+      background:#ef4444; color:white; border-radius:10px;
+      font-size:0.65rem; font-weight:800; display:none;
+      align-items:center; justify-content:center;
+      font-family:'Outfit',sans-serif; border:2px solid white;
+      line-height:1;
+    }
+    .notif-badge.show { display:flex; }
+    .notif-dropdown {
+      position:absolute; top:calc(100% + 10px); right:0;
+      width:320px; background:white; border-radius:16px;
+      box-shadow:0 20px 60px rgba(0,0,0,0.18); border:1px solid #e2e8f0;
+      z-index:999; opacity:0; pointer-events:none;
+      transform:translateY(-8px) scale(0.97);
+      transition:opacity 0.22s ease, transform 0.22s ease;
+      overflow:hidden;
+    }
+    .notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0) scale(1); }
+    @media (max-width: 768px) {
+      .notif-dropdown {
+        position: fixed !important;
+        top: 70px !important;
+        left: 8px !important;
+        right: 8px !important;
+        width: auto !important;
+        max-width: 100% !important;
+        max-height: 70vh;
+        overflow-y: auto;
+        z-index: 1200;
+      }
+    }
+    .notif-header {
+      padding:14px 16px 10px; border-bottom:1px solid #f1f5f9;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .notif-header-title { font-size:0.88rem; font-weight:800; color:#0f172a; font-family:'Outfit',sans-serif; }
+    .notif-mark-read {
+      font-size:.72rem; font-weight:700; color:#f59e0b;
+      background:none; border:none; cursor:pointer;
+      font-family:"Outfit",sans-serif;
+      padding:3px 8px; border-radius:6px;
+      transition:background 0.2s ease, color 0.2s ease;
+    }
+    .notif-mark-read:hover { background:#fff7e6; color:#d97706; }
+    .notif-list { max-height:340px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
+    .notif-list::-webkit-scrollbar { width:4px; }
+    .notif-list::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
+    .notif-item {
+      display:flex; align-items:flex-start; gap:10px;
+      padding:11px 16px; border-bottom:1px solid #f8fafc;
+      transition:background 0.15s ease; cursor:default;
+    }
+    .notif-item:last-child { border-bottom:none; }
+    .notif-item:hover { background:#fafafa; }
+    .notif-item.unread { background:#fffbeb; }
+    .notif-item.unread:hover { background:#fef9e7; }
+    .notif-dot-icon {
+      width:34px; height:34px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center; margin-top:1px;
+    }
+    .notif-content { flex:1; min-width:0; }
+    .notif-title { font-size:0.8rem; font-weight:700; color:#0f172a; margin:0 0 2px; font-family:'Outfit',sans-serif; }
+    .notif-name  { font-size:0.75rem; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .notif-time  { font-size:0.7rem; color:#94a3b8; margin-top:3px; }
+    .notif-unread-dot {
+      width:7px; height:7px; background:#f59e0b; border-radius:50%;
+      flex-shrink:0; margin-top:6px;
+    }
+    .notif-footer { padding:10px 16px; border-top:1px solid #f1f5f9; text-align:center; }
+    .notif-footer a { font-size:0.78rem; font-weight:700; color:#f59e0b; text-decoration:none; font-family:'Outfit',sans-serif; }
+    .notif-footer a:hover { text-decoration:underline; }
+    .notif-empty { text-align:center; padding:30px 20px; color:#94a3b8; font-size:0.82rem; font-family:'Outfit',sans-serif; }
+    .notif-loading { text-align:center; padding:24px 20px; }
+    .notif-spinner { width:22px; height:22px; border:2.5px solid #e2e8f0; border-top-color:#f59e0b; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
 
        /* ── PAGE LOAD ANIMATIONS (matches my-bookings.php / admin-dashboard.php) ── */
     @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -271,6 +363,23 @@ $conn->close();
       .note-input { min-width:unset; }
       .pending-details { gap:.5rem; }
     }
+
+    /* ── Sidebar backdrop (para ma-close pag click outside) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 900; /* ubos sa sidebar pero taas sa content */
+}
+body.sidebar-open .sidebar-backdrop {
+  display: block;
+}
+
+.sidebar {
+  z-index: 950; /* mas taas kaysa backdrop (900) */
+}
+
   </style>
 </head>
 <body class="role-admin">
@@ -338,21 +447,39 @@ $conn->close();
 
   <main class="main-content">
     <header class="top-bar">
-      <div class="page-header">
-        <h1 class="current-page-title">Subscriptions</h1>
-      </div>
-      <div class="top-bar-actions">
-        <div class="user-profile">
-          <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;font-size:.85rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;">
-            <?php echo $userInitials; ?>
-          </div>
-          <div class="user-info">
-            <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
-            <span class="user-role">Administrator</span>
-          </div>
+  <div class="page-header">
+    <h1 class="current-page-title">Subscriptions</h1>
+  </div>
+  <div class="top-bar-actions">
+
+    <div class="notif-wrapper">
+      <button class="icon-btn notification-btn" id="notifBtn">
+        <img src="../assets/icons/bell.svg" alt="Notifications" width="20" height="20" />
+        <span class="notif-badge" id="notifBadge"></span>
+      </button>
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-header">
+          <span class="notif-header-title">Notifications</span>
+          <button class="notif-mark-read" id="markAllRead">Mark all read</button>
         </div>
+        <div class="notif-list" id="notifList">
+          <div class="notif-loading"><div class="notif-spinner"></div></div>
+        </div>
+        <div class="notif-footer"><a href="admin-subscriptions.php">View all →</a></div>
       </div>
-    </header>
+    </div>
+
+    <div class="user-profile">
+      <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;font-size:.85rem;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;">
+        <?php echo $userInitials; ?>
+      </div>
+      <div class="user-info">
+        <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
+        <span class="user-role">Administrator</span>
+      </div>
+    </div>
+  </div>
+</header>
 
     <div class="dashboard-content">
 
@@ -550,6 +677,77 @@ $conn->close();
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') closeImgModal();
     });
+
+    // ── NOTIFICATION BELL ─────────────────────────────────────
+const notifItems     = <?php echo json_encode($notifItems); ?>;
+const notifBtn        = document.getElementById("notifBtn");
+const notifDropdown   = document.getElementById("notifDropdown");
+const notifBadge      = document.getElementById("notifBadge");
+const notifList       = document.getElementById("notifList");
+let notifOpen         = false;
+let seenIds            = JSON.parse(localStorage.getItem("notifSeenIds_sub") || "[]");
+
+function timeAgoShort(dateStr) {
+  if (!dateStr) return "";
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (diff < 60)    return "just now";
+  if (diff < 3600)  return Math.floor(diff / 60) + "m ago";
+  if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+  return Math.floor(diff / 86400) + "d ago";
+}
+
+function renderNotifications() {
+  const unread = notifItems.filter(n => !seenIds.includes(n.id)).length;
+  if (unread > 0) {
+    notifBadge.textContent = unread > 9 ? "9+" : unread;
+    notifBadge.classList.add("show");
+  } else {
+    notifBadge.classList.remove("show");
+  }
+
+  if (!notifItems.length) {
+    notifList.innerHTML = `<div class="notif-empty">🎉 No pending payments.</div>`;
+    return;
+  }
+
+  notifList.innerHTML = notifItems.map(n => {
+    const isUnread = !seenIds.includes(n.id);
+    return `
+      <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+        <div class="notif-dot-icon">
+          <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#f59e0b"/><rect x="9" y="7" width="2" height="6" rx="1" fill="white"/><rect x="13" y="7" width="2" height="6" rx="1" fill="white"/><rect x="8" y="15" width="8" height="2" rx="1" fill="white"/></svg>
+        </div>
+        <div class="notif-content">
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-name">${n.name}</div>
+          <div class="notif-time">${timeAgoShort(n.time)}</div>
+        </div>
+        ${isUnread ? '<div class="notif-unread-dot"></div>' : ''}
+      </div>`;
+  }).join("");
+}
+
+notifBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  notifOpen = !notifOpen;
+  notifDropdown.classList.toggle("open", notifOpen);
+  if (notifOpen) renderNotifications();
+});
+
+document.addEventListener("click", (e) => {
+  if (!notifBtn.closest(".notif-wrapper").contains(e.target)) {
+    notifOpen = false;
+    notifDropdown.classList.remove("open");
+  }
+});
+
+document.getElementById("markAllRead").addEventListener("click", () => {
+  notifItems.forEach(n => { if (!seenIds.includes(n.id)) seenIds.push(n.id); });
+  localStorage.setItem("notifSeenIds_sub", JSON.stringify(seenIds));
+  renderNotifications();
+});
+
+renderNotifications();
   </script>
 </body>
 </html>

@@ -250,6 +250,23 @@ $userInitials = strtoupper(substr($userName, 0, 2));
   cursor: pointer; transition: all 0.2s;
 }
 .modal-btn-confirm:hover { transform: translateY(-1px); opacity: 0.9; }
+
+/* ── Sidebar backdrop (para ma-close pag click outside) ── */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 900; /* ubos sa sidebar pero taas sa content */
+}
+body.sidebar-open .sidebar-backdrop {
+  display: block;
+}
+
+.sidebar {
+  z-index: 950; /* mas taas kaysa backdrop (900) */
+}
+
     </style>
   </head>
   <body class="role-admin">

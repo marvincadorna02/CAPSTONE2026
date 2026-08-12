@@ -448,7 +448,9 @@ $conn->close();
               </div>
             </div>
 
-            <div class="forgot-password"><a href="#">Forgot Password?</a></div>
+            <div style="text-align:right;margin-top:-8px;margin-bottom:16px;">
+  <a href="#" onclick="parent.postMessage('switch-to-forgot', '*'); return false;" style="font-size:.8rem;color:#f59e0b;text-decoration:none;font-weight:600;">Forgot Password?</a>
+</div>
             <button type="submit" class="sign-in-btn">Sign in</button>
             <div class="signup-link">Don't have an account? <a href="signup.php">Sign Up</a></div>
           </form>
