@@ -26,18 +26,37 @@ $userRole = $_SESSION['role'] ?? 'customer';
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 
-  .hero-image{
+.hero-image{
     width:900%;
     max-width:500px;
     height:auto;
     display:block;
     margin-left:-60px;
 }
+.hero-image.slide{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    opacity:0;
+    transition:opacity 1.2s ease-in-out;
+    pointer-events:none;
+    margin-left:0;
+}
+.hero-image.slide.active{
+    opacity:1;
+    pointer-events:auto;
+}
 
-.hero-visual{
-  position:absolute;right:10%;top:50%;transform:translate(-40px,-50%);
-  z-index:2;width:420px;
-  animation:fadeLeft 0.8s ease 0.3s both;
+.hero-image.slide[data-slide="0"]{
+    transform:scale(1.3) translateX(20px);
+}
+
+.hero-image.slide[data-slide="1"]{
+    object-fit:cover;
+    transform:scale(1.6) translateX(20px);
 }
 
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -158,10 +177,10 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .stat-label{font-size:12px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:1px;}
 .hero-visual{
   position:absolute;right:5%;top:50%;transform:translateY(-50%);
-  z-index:2;width:420px;
+  z-index:2;width:550px;height:550px;
   animation:fadeLeft 0.8s ease 0.3s both;
 }
-@media(max-width:1100px){.hero-visual{display:none;}}
+@media(max-width:1300px){.hero-visual{display:none;}}
 
 /* FLOATING CARD */
 .float-card{
@@ -460,10 +479,10 @@ html{
     </div>
   </div>
 
-  <!-- Floating Card Preview -->
+<!-- Floating Card Preview -->
   <div class="hero-visual">
-    <img src="assets/images/man.png" alt="Repair Illustration" class="hero-image">
-</div>
+    <img src="assets/images/man.png" alt="Repair Illustration" class="hero-image slide active" data-slide="0">
+    <img src="assets/images/picture2.png" alt="Fix It Davao Logo" class="hero-image slide" data-slide="1">
   </div>
 </section>
 
@@ -664,17 +683,9 @@ const headerObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0.2 });
 document.querySelectorAll('.section-header').forEach(el => headerObserver.observe(el));
 
-// ── Hero parallax zoom on scroll ──
-const heroImg = document.querySelector('.hero-image');
+// ── Background grid parallax on scroll ──
 window.addEventListener('scroll', () => {
   const scrolled = window.scrollY;
-  const heroHeight = document.querySelector('.hero').offsetHeight;
-  const progress = Math.min(scrolled / heroHeight, 1);
-  if (heroImg) {
-    heroImg.style.transform = `scale(${1 + progress * 0.15}) translateY(${progress * 30}px)`;
-    heroImg.style.opacity = 1 - progress * 0.6;
-  }
-// background grid parallax (slower move = depth)
   const grid = document.querySelector('.hero-bg-grid');
   if (grid) grid.style.transform = `translateY(${scrolled * 0.15}px)`;
 });
@@ -715,6 +726,18 @@ const statObserver = new IntersectionObserver((entries) => {
 
 const heroStats = document.querySelector('.hero-stats');
 if (heroStats) statObserver.observe(heroStats);
+
+// ── Hero image slideshow (fade crossfade) ──
+const heroSlides = document.querySelectorAll('.hero-visual .hero-image.slide');
+let currentSlide = 0;
+
+if (heroSlides.length > 1) {
+  setInterval(() => {
+    heroSlides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % heroSlides.length;
+    heroSlides[currentSlide].classList.add('active');
+  }, 3500); // 3.5 seconds per slide
+}
 </script>
 <script>
 setTimeout(function () {

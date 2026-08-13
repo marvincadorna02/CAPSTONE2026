@@ -21,7 +21,7 @@ $_SESSION['last_activity'] = time();
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     // --- CONFIG ---
-    define('GROQ_API_KEY', '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');
+    define('GROQ_API_KEY', getenv('GROQ_API_KEY'));
     define('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions');
     define('GROQ_MODEL', 'llama-3.3-70b-versatile'); // fast & free
 

@@ -7,6 +7,10 @@ use PHPMailer\PHPMailer\Exception;
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] !== 'admin') { header("../shop-owner/dashboard.php"); exit(); }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName     = $_SESSION['name'];
 $userInitials = strtoupper(substr($userName, 0, 2));
 
@@ -18,6 +22,12 @@ $msgType = '';
 
 // ── Handle admin actions ──────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Invalid request.");
+    }
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
     $action = $_POST['action'] ?? '';
     $subId  = (int)($_POST['sub_id'] ?? 0);
     $note   = trim($_POST['admin_note'] ?? '');
@@ -157,11 +167,11 @@ $stats = $conn->query("
         COUNT(CASE WHEN status='active'  THEN 1 END) AS active_count,
         COUNT(CASE WHEN status='pending' THEN 1 END) AS pending_count,
         COUNT(CASE WHEN status='expired' THEN 1 END) AS expired_count,
-        COALESCE(SUM(CASE WHEN status='active' THEN sp.price END), 0) AS active_revenue
+        COALESCE(SUM(CASE WHEN status='active' THEN sp.price END), 0) AS active_revenue,
+        COALESCE(SUM(CASE WHEN status IN ('active','expired') THEN sp.price END), 0) AS total_revenue
     FROM shop_subscriptions ss
     JOIN subscription_plans sp ON ss.plan_id = sp.id
 ")->fetch_assoc();
-
 $conn->close();
 ?>
 <!doctype html>
@@ -272,12 +282,18 @@ $conn->close();
 
     /* ── STAT CARDS ── */
     .sub-stats { display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1.1rem;margin-bottom:1.5rem;animation:fadeInUp .4s ease; }
-    .sub-stat-card { background:white;border-radius:14px;padding:1.2rem 1.3rem;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:.9rem;position:relative;overflow:hidden; }
+    .sub-stat-card { background:white;border-radius:14px;padding:1.2rem 1.3rem;border:1px solid #f1f5f9;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;align-items:center;gap:.9rem;position:relative;overflow:hidden;transition: transform 0.25s ease, box-shadow 0.25s}
+    .sub-stat-card:hover { /* ADD THIS BLOCK */
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.11);
+}
     .sub-stat-card::after { content:'';position:absolute;top:0;left:0;width:4px;height:100%;border-radius:4px 0 0 4px; }
     .sc-active::after  { background:#10b981; }
     .sc-pending::after { background:#f59e0b; }
     .sc-expired::after { background:#ef4444; }
     .sc-revenue::after { background:#8b5cf6; }
+    .sc-total::after { background:#3b82f6; }
+    .sc-total .sub-stat-icon { background:#dbeafe; }
     .sub-stat-icon { width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0; }
     .sc-active  .sub-stat-icon { background:#d1fae5; }
     .sc-pending .sub-stat-icon { background:#fef3c7; }
@@ -495,7 +511,7 @@ body.sidebar-open .sidebar-backdrop {
         <div class="sub-stat-card sc-active">
           <div class="sub-stat-icon"><img src="../assets/icons/approve.svg" alt="" width="26" height="26"></div>
           <div>
-            <div class="sub-stat-val"><?php echo $stats['active_count']; ?></div>
+            <div class="sub-stat-val" data-target="<?php echo $stats['active_count']; ?>">0</div>
             <div class="sub-stat-lbl">Active Subscriptions</div>
           </div>
         </div>
@@ -520,6 +536,13 @@ body.sidebar-open .sidebar-backdrop {
             <div class="sub-stat-lbl">Active Revenue</div>
           </div>
         </div>
+        <div class="sub-stat-card sc-total">
+  <div class="sub-stat-icon"><img src="../assets/icons/bag.svg" alt="" width="26" height="26" /></div>
+  <div>
+    <div class="sub-stat-val">₱<?php echo number_format($stats['total_revenue'], 0); ?></div>
+    <div class="sub-stat-lbl">Total Revenue (All Time)</div>
+  </div>
+</div>
       </div>
 
       <!-- ── PENDING APPROVALS ── -->
@@ -574,6 +597,7 @@ body.sidebar-open .sidebar-backdrop {
 
           <form method="POST" style="margin:0;">
             <input type="hidden" name="sub_id" value="<?php echo $sub['id']; ?>" />
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <div class="action-row">
               <input type="text" name="admin_note" class="note-input" placeholder="Optional note to shop (e.g., reason for rejection)..." />
               <button type="submit" name="action" value="approve" class="btn-approve" onclick="return confirm('Approve this subscription?')">✅ Approve</button>
@@ -625,6 +649,7 @@ body.sidebar-open .sidebar-backdrop {
                   <?php if ($sub['status'] === 'active'): ?>
                   <form method="POST" style="margin:0;" onsubmit="return confirm('Manually expire this subscription?')">
                     <input type="hidden" name="sub_id" value="<?php echo $sub['id']; ?>" />
+                    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
                     <button type="submit" name="action" value="expire" class="btn-expire-sm">Expire</button>
                   </form>
                   <?php else: ?>

@@ -17,7 +17,7 @@ if (!isset($_SESSION['user_id'])) {
   exit();
 }
 
-$userId = $_SESSION['user_id'];
+$userId = (int) $_SESSION['user_id'];
 
 $conn = new mysqli('localhost', 'root', '', 'fixitdavao');
 if ($conn->connect_error) {
@@ -26,19 +26,29 @@ if ($conn->connect_error) {
 }
 
 // Total bookings
-$bookings = $conn->query("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = $userId");
-$totalBookings = $bookings->fetch_assoc()['cnt'] ?? 0;
+$stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM bookings WHERE customer_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$totalBookings = $stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+$stmt->close();
 
 // Total favorites
-$favs = $conn->query("SELECT COUNT(*) as cnt FROM favorites WHERE user_id = $userId");
-$totalFavorites = $favs->fetch_assoc()['cnt'] ?? 0;
+$stmt = $conn->prepare("SELECT COUNT(*) as cnt FROM favorites WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$totalFavorites = $stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+$stmt->close();
 
 // Member since
-$user = $conn->query("SELECT created_at FROM users WHERE id = $userId");
+$stmt = $conn->prepare("SELECT created_at FROM users WHERE id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$user = $stmt->get_result();
 $memberSince = '';
 if ($row = $user->fetch_assoc()) {
   $memberSince = date('M Y', strtotime($row['created_at']));
 }
+$stmt->close();
 
 $conn->close();
 

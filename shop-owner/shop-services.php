@@ -43,9 +43,14 @@ if ($savedLogoUrl) {
 $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=".urlencode($userName)."&background=f59e0b&color=fff";
 
 // ── Load saved services from DB ───────────────────────────────
-$svcResult = $conn->query("SELECT service_name, service_fee, service_duration FROM services WHERE user_id = $userId ORDER BY id ASC");
+$userId = (int) $userId;
+$stmt = $conn->prepare("SELECT service_name, service_fee, service_duration FROM services WHERE user_id = ? ORDER BY id ASC");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$svcResult = $stmt->get_result();
 $dbServices = [];
 while ($row = $svcResult->fetch_assoc()) $dbServices[] = $row;
+$stmt->close();
 $conn->close();
 ?>
 <!doctype html>
@@ -81,6 +86,7 @@ $conn->close();
       .top-bar      { animation: fadeInUp 0.4s ease both; }
       .summary-row  { animation: fadeInUp 0.5s ease both; }
       #servicesList { animation: fadeInUp 0.6s ease both; }
+      @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
       /* ── LOGOUT MODAL ── */
 .modal-overlay {

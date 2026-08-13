@@ -84,6 +84,9 @@ $conn->close();
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Forgot Password</title>
+  <link rel="icon" type="image/png" href="assets/images/logo.png" />
+  <link rel="apple-touch-icon" href="assets/images/logo.png" />
+  <link rel="shortcut icon" href="assets/images/logo.png" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
@@ -128,10 +131,8 @@ $conn->close();
   <script>
 function handleBackToLogin() {
   if (window.parent !== window) {
-    // naa ta sulod sa modal iframe (gikan sa home.php)
     parent.postMessage('switch-to-login', '*');
   } else {
-    // standalone/direct nga pag-open, i-redirect diretso
     window.location.href = 'home.php';
   }
 }

@@ -34,6 +34,9 @@ if ($conn->connect_error) {
     exit();
 }
 
+// ── Auto-expire subscriptions past end_date (runs on every load) ──
+$conn->query("UPDATE shop_subscriptions SET status='expired' WHERE status='active' AND end_date < CURDATE()");
+
 function addColumnIfMissing($conn, $table, $column, $definition) {
     $result = $conn->query("SHOW COLUMNS FROM `$table` LIKE '$column'");
     if ($result && $result->num_rows === 0) {
@@ -112,27 +115,31 @@ while ($row = $result->fetch_assoc()) {
     $sid = (int)$row['id'];
 
     // ── Fetch services ──
-    $svcResult = $conn->query(
-        "SELECT service_name, service_fee FROM services
-         WHERE user_id = $sid ORDER BY id ASC"
-    );
+    $svcStmt = $conn->prepare("SELECT service_name, service_fee FROM services WHERE user_id = ? ORDER BY id ASC");
+    $svcStmt->bind_param("i", $sid);
+    $svcStmt->execute();
+    $svcResult = $svcStmt->get_result();
     $row['services'] = [];
     if ($svcResult) {
         while ($svc = $svcResult->fetch_assoc()) {
             $row['services'][] = $svc;
         }
     }
+    $svcStmt->close();
 
     // ── Fetch operating hours ──
     $row['operating_hours'] = (object)[];
     $row['open_days']       = [];
 
-    $hResult = $conn->query(
+    $hStmt = $conn->prepare(
         "SELECT day, open_time, close_time
          FROM operating_hours
-         WHERE user_id = $sid
+         WHERE user_id = ?
          ORDER BY FIELD(day,'monday','tuesday','wednesday','thursday','friday','saturday','sunday')"
     );
+    $hStmt->bind_param("i", $sid);
+    $hStmt->execute();
+    $hResult = $hStmt->get_result();
 
     if ($hResult && $hResult->num_rows > 0) {
         $hoursMap = [];
@@ -148,36 +155,45 @@ while ($row = $result->fetch_assoc()) {
         $row['operating_hours'] = $hoursMap;
         $row['open_days']       = $openDays;
     }
+    $hStmt->close();
 
     // ── Fetch avg rating & review count ──
     $row['avg_rating']     = 0;
     $row['review_count']   = 0;
     $row['recent_reviews'] = [];
 
-    $ratingResult = $conn->query(
+    $ratingStmt = $conn->prepare(
         "SELECT ROUND(AVG(rating), 1) AS avg_rating, COUNT(*) AS review_count
-         FROM reviews WHERE shop_id = $sid"
+         FROM reviews WHERE shop_id = ?"
     );
+    $ratingStmt->bind_param("i", $sid);
+    $ratingStmt->execute();
+    $ratingResult = $ratingStmt->get_result();
     if ($ratingResult && $ratingRow = $ratingResult->fetch_assoc()) {
         $row['avg_rating']   = $ratingRow['avg_rating']   ? (float)$ratingRow['avg_rating']   : 0;
         $row['review_count'] = $ratingRow['review_count'] ? (int)$ratingRow['review_count']   : 0;
     }
+    $ratingStmt->close();
 
     // ── Fetch latest 5 reviews ──
-    $rvResult = $conn->query(
+    $rvStmt = $conn->prepare(
         "SELECT rv.id, rv.rating, rv.comment, rv.reply, rv.replied_at, rv.created_at,
                 u.name AS customer_name
          FROM reviews rv
          LEFT JOIN users u ON u.id = rv.customer_id
-         WHERE rv.shop_id = $sid
+         WHERE rv.shop_id = ?
          ORDER BY rv.created_at DESC
          LIMIT 5"
     );
+    $rvStmt->bind_param("i", $sid);
+    $rvStmt->execute();
+    $rvResult = $rvStmt->get_result();
     if ($rvResult) {
         while ($rvRow = $rvResult->fetch_assoc()) {
             $row['recent_reviews'][] = $rvRow;
         }
     }
+    $rvStmt->close();
 
     $shops[] = $row;
 }

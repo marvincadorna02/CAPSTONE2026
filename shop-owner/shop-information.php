@@ -14,6 +14,10 @@ $_SESSION['last_activity'] = time();
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] !== 'repairshop') { header("Location: dashboard.php"); exit(); }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 // Use shop_name for display if it exists
 $conn_temp = new mysqli("localhost", "root", "", "fixitdavao");
@@ -25,7 +29,7 @@ $stmt_temp->close();
 $conn_temp->close();
 if (!empty($row_temp['shop_name'])) $userName = $row_temp['shop_name'];
 $userEmail = $_SESSION['email'];
-$userId    = $_SESSION['user_id'];
+$userId    = (int) $_SESSION['user_id'];
 
 // ── DB connection ─────────────────────────────────────────────
 $host   = "localhost";
@@ -84,14 +88,22 @@ if ($savedLogoUrl) {
 }
 
 // ── Load existing services ────────────────────────────────────
-$svcResult = $conn->query("SELECT service_name, service_fee, service_duration FROM services WHERE user_id = $userId ORDER BY id ASC");
+$stmt = $conn->prepare("SELECT service_name, service_fee, service_duration FROM services WHERE user_id = ? ORDER BY id ASC");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$svcResult = $stmt->get_result();
 $services  = [];
 while ($row = $svcResult->fetch_assoc()) $services[] = $row;
+$stmt->close();
 
 // ── Load existing operating hours ────────────────────────────
-$hrsResult = $conn->query("SELECT day, open_time, close_time FROM operating_hours WHERE user_id = $userId");
+$stmt = $conn->prepare("SELECT day, open_time, close_time FROM operating_hours WHERE user_id = ?");
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$hrsResult = $stmt->get_result();
 $hours     = [];
 while ($row = $hrsResult->fetch_assoc()) $hours[$row['day']] = $row;
+$stmt->close();
 
 $savedLat  = $shop['latitude']  ?? '';
 $savedLng  = $shop['longitude'] ?? '';
@@ -350,6 +362,7 @@ body.sidebar-open .sidebar-backdrop {
           </div>
 
           <form id="shopForm" class="shop-form" method="POST" action="save-shop.php" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <input type="hidden" name="user_id" value="<?php echo $userId; ?>" />
 
             <!-- ── Shop Logo ── -->

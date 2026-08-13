@@ -16,6 +16,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'repairshop') {
     exit();
 }
 
+if (!isset($_POST['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+    http_response_code(403);
+    die("Your session has expired or this page was loaded before an update. Please refresh the page (Ctrl+F5) and try again.");
+}
+$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
 $host   = "localhost";
 $dbname = "fixitdavao";
 $dbuser = "root";
@@ -87,26 +94,52 @@ if (!empty($_FILES['shop_logo']['name'])) {
 }
 
 // ── Save basic shop info ─────────────────────────────────────
-$shopName = $conn->real_escape_string(trim($_POST['shop_name']      ?? ''));
-$shopLoc  = $conn->real_escape_string(trim($_POST['shop_location']  ?? ''));
-$contact  = $conn->real_escape_string(trim($_POST['contact_number'] ?? ''));
-$email    = $conn->real_escape_string(trim($_POST['email']          ?? ''));
+$shopName = trim($_POST['shop_name']      ?? '');
+$shopLoc  = trim($_POST['shop_location']  ?? '');
+$contact  = trim($_POST['contact_number'] ?? '');
+$email    = trim($_POST['email']          ?? '');
 
+// ── Validate required fields ─────────────────────────────────
 if (!$shopName || !$shopLoc || !$contact || !$email) {
     die("Please fill in all required fields.");
 }
 
-$lat = !empty($_POST['latitude'])  ? (float)$_POST['latitude']  : null;
-$lng = !empty($_POST['longitude']) ? (float)$_POST['longitude'] : null;
-$latSql = $lat !== null ? ", latitude=$lat" : '';
-$lngSql = $lng !== null ? ", longitude=$lng" : '';
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    die("Please enter a valid email address.");
+}
+
+// PH mobile/landline: digits, spaces, +, - only, 7-15 digits
+if (!preg_match('/^[0-9+\-\s]{7,15}$/', $contact)) {
+    die("Please enter a valid contact number.");
+}
+
+// latitude/longitude are optional -- only touch them if the user actually sent coords,
+// so bind_param never has to deal with binding NULL into a "d" (double) slot
+$hasCoords = !empty($_POST['latitude']) && !empty($_POST['longitude']);
+$lat = $hasCoords ? (float)$_POST['latitude']  : 0;
+$lng = $hasCoords ? (float)$_POST['longitude'] : 0;
+
+$coordSql = $hasCoords ? ", latitude=?, longitude=?" : "";
 
 if ($logoUrl) {
-    $safe = $conn->real_escape_string($logoUrl);
-    $conn->query("UPDATE users SET name='$shopName', shop_name='$shopName', shop_location='$shopLoc', contact_number='$contact', email='$email', logo_url='$safe'$latSql$lngSql WHERE id=$userId");
+    $sql = "UPDATE users SET name=?, shop_name=?, shop_location=?, contact_number=?, email=?, logo_url=?$coordSql WHERE id=?";
+    $stmt = $conn->prepare($sql);
+    if ($hasCoords) {
+        $stmt->bind_param("ssssssddi", $shopName, $shopName, $shopLoc, $contact, $email, $logoUrl, $lat, $lng, $userId);
+    } else {
+        $stmt->bind_param("ssssssi", $shopName, $shopName, $shopLoc, $contact, $email, $logoUrl, $userId);
+    }
 } else {
-    $conn->query("UPDATE users SET name='$shopName', shop_name='$shopName', shop_location='$shopLoc', contact_number='$contact', email='$email'$latSql$lngSql WHERE id=$userId");
+    $sql = "UPDATE users SET name=?, shop_name=?, shop_location=?, contact_number=?, email=?$coordSql WHERE id=?";
+    $stmt = $conn->prepare($sql);
+    if ($hasCoords) {
+        $stmt->bind_param("sssssddi", $shopName, $shopName, $shopLoc, $contact, $email, $lat, $lng, $userId);
+    } else {
+        $stmt->bind_param("sssssi", $shopName, $shopName, $shopLoc, $contact, $email, $userId);
+    }
 }
+$stmt->execute();
+$stmt->close();
 
 // ── Save services ────────────────────────────────────────────
 $serviceNames     = $_POST['service_name']     ?? [];

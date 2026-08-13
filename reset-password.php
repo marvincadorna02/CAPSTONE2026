@@ -1,5 +1,8 @@
 <?php
 session_start();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 $conn = new mysqli("localhost", "root", "", "fixitdavao");
 if ($conn->connect_error) die("DB error: " . $conn->connect_error);
 
@@ -24,6 +27,12 @@ if ($token) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Invalid request.");
+    }
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
     $newPass = $_POST['password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
@@ -81,6 +90,7 @@ $conn->close();
     <p class="sub">Enter your new password below.</p>
     <form method="POST">
       <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>" />
+      <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
       <label>New Password</label>
       <input type="password" name="password" placeholder="At least 6 characters" required minlength="6" />
       <label>Confirm Password</label>

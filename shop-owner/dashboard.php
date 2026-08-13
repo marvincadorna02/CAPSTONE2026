@@ -14,6 +14,10 @@ $_SESSION['last_activity'] = time();
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] === 'admin') { header("../admin/admin-dashboard.php"); exit(); }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userRole  = $_SESSION['role'];
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
@@ -438,6 +442,7 @@ body.sidebar-open .sidebar-backdrop {
             <p>Update your shop details, services, and availability</p>
           </div>
           <form id="shopForm" class="shop-form" method="POST" action="save-shop.php" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <div class="form-section">
               <h3 class="section-title">Shop Logo</h3>
               <div class="logo-upload-area">
@@ -773,7 +778,7 @@ document.querySelectorAll('.sidebar .nav-item').forEach(link => {
   let searchQuery  = '';
 
   function escHtml(s) {
-    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
   function shopAvatarUrl(name, logoUrl) {
     return logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=f59e0b&color=fff&size=128`;

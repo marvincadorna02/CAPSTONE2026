@@ -431,6 +431,11 @@ $userInitials = strtoupper(substr($userName, 0, 2));
   background: white; border-radius: 16px; padding: 1.2rem 1.4rem;
   box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid #f1f5f9;
   display: flex; align-items: center; gap: 0.9rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.reg-summary-card:hover { /* ADD */
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.11);
 }
 .reg-summary-icon {
   width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
@@ -665,7 +670,7 @@ body.sidebar-open .sidebar-backdrop {
 
   <!-- Row 2: Line graph -->
   <div style="margin-top:1.25rem;">
-    <div style="font-size:0.78rem;font-weight:600;color:#64748b;margin-bottom:8px;">Registration Timeline — Last 30 days</div>
+    <div style="font-size:0.78rem;font-weight:600;color:#64748b;margin-bottom:8px;">Registration Timeline — All Time</div>
     <div style="height:180px;position:relative;">
       <canvas id="timelineChart"></canvas>
     </div>
@@ -772,13 +777,16 @@ body.sidebar-open .sidebar-backdrop {
 </div>
 </div>
         <div class="reg-controls">
-          <div class="reg-tabs">
-            <button class="reg-tab-btn active" data-role="all">All</button>
-            <button class="reg-tab-btn" data-role="customer">Customers</button>
-            <button class="reg-tab-btn" data-role="repairshop">Shop Owners</button>
-          </div>
-          <input type="text" class="reg-search" id="regSearch" placeholder="Search by name or email…" />
-        </div>
+  <div class="reg-tabs">
+    <button class="reg-tab-btn active" data-role="all">All</button>
+    <button class="reg-tab-btn" data-role="customer">Customers</button>
+    <button class="reg-tab-btn" data-role="repairshop">Shop Owners</button>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="reg-tab-btn" id="regSortBtn">Oldest First</button>
+    <input type="text" class="reg-search" id="regSearch" placeholder="Search by name or email…" />
+  </div>
+</div>
 
         <div class="reg-table-wrap">
           <table class="reg-table">
@@ -788,7 +796,9 @@ body.sidebar-open .sidebar-backdrop {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Status</th>
-                <th>Registered</th>
+                <th id="regSortHeader" style="cursor:pointer;user-select:none;">
+  Registered <span id="regSortIcon">↑</span>
+</th>
               </tr>
             </thead>
             <tbody id="regTableBody">
@@ -1158,6 +1168,8 @@ function fmtRegDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' });
 }
 
+let regSortOrder = 'asc'; // oldest first by default
+
 function renderRegistrations() {
   const tbody = document.getElementById('regTableBody');
   let filtered = allRegistrations;
@@ -1171,6 +1183,12 @@ function renderRegistrations() {
       u.email.toLowerCase().includes(regSearchQuery)
     );
   }
+
+  filtered = [...filtered].sort((a, b) => {
+    const dateA = new Date(a.created_at);
+    const dateB = new Date(b.created_at);
+    return regSortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
 
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="reg-empty">No registrations found.</td></tr>`;
@@ -1230,6 +1248,22 @@ document.getElementById('regSearch').addEventListener('input', function() {
   renderRegistrations();
 });
 
+function toggleRegSort() {
+  regSortOrder = regSortOrder === 'desc' ? 'asc' : 'desc';
+  document.getElementById('regSortIcon').textContent = regSortOrder === 'desc' ? '↓' : '↑';
+  document.getElementById('regSortBtn').textContent  = regSortOrder === 'desc' ? 'Newest First' : 'Oldest First';
+
+  // Reset filter back to "All" para makita tanan nga registrations naka-sort
+  regRoleFilter = 'all';
+  document.querySelectorAll('.reg-tab-btn[data-role]').forEach(b => b.classList.remove('active'));
+  document.querySelector('.reg-tab-btn[data-role="all"]').classList.add('active');
+
+  renderRegistrations();
+}
+
+document.getElementById('regSortHeader').addEventListener('click', toggleRegSort);
+document.getElementById('regSortBtn').addEventListener('click', toggleRegSort);
+
 loadRegistrations();
 
 // ── Donut chart instance ───────────────────────────────
@@ -1269,50 +1303,88 @@ function renderStatusChart(approved, pending, rejected) {
 let timelineChart = null;
 
 function renderTimelineChart(dailyData) {
-  const labels = [];
   const customerMap = {};
   const shopMap = {};
 
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+  (dailyData || []).forEach(row => {
+    if (row.role === "customer")   customerMap[row.reg_date] = (customerMap[row.reg_date] || 0) + parseInt(row.count);
+    if (row.role === "repairshop") shopMap[row.reg_date]     = (shopMap[row.reg_date] || 0) + parseInt(row.count);
+  });
+
+  // Determine earliest date
+  const allDates = [...Object.keys(customerMap), ...Object.keys(shopMap)];
+  let startDate = allDates.length ? new Date(Math.min(...allDates.map(d => new Date(d)))) : new Date();
+  const today = new Date();
+  const totalDays = Math.ceil((today - startDate) / (1000*60*60*24));
+
+// Always daily — konti ra man ang volume sa registrations
+  let groupBy = 'day';
+
+  const labels = [];
+  const customerSeries = [];
+  const shopSeries = [];
+  const bucket = {};
+
+  for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
     const key = d.toISOString().split("T")[0];
-    labels.push(d.toLocaleDateString("en-PH", { month:"short", day:"numeric" }));
-    customerMap[key] = 0;
-    shopMap[key] = 0;
+    let bucketKey;
+    if (groupBy === 'day') {
+      bucketKey = key;
+    } else if (groupBy === 'week') {
+      const weekStart = new Date(d);
+      weekStart.setDate(d.getDate() - d.getDay());
+      bucketKey = weekStart.toISOString().split("T")[0];
+    } else {
+      bucketKey = `${d.getFullYear()}-${d.getMonth()}`;
+    }
+    if (!bucket[bucketKey]) {
+      bucket[bucketKey] = { customer: 0, shop: 0, label: null };
+    }
+    bucket[bucketKey].customer += customerMap[key] || 0;
+    bucket[bucketKey].shop     += shopMap[key] || 0;
+    if (!bucket[bucketKey].label) {
+      bucket[bucketKey].label = groupBy === 'month'
+        ? d.toLocaleDateString("en-PH", { month:"short", year:"2-digit" })
+        : d.toLocaleDateString("en-PH", { month:"short", day:"numeric" });
+    }
   }
 
-  (dailyData || []).forEach(row => {
-    if (row.role === "customer")   customerMap[row.reg_date] = parseInt(row.count);
-    if (row.role === "repairshop") shopMap[row.reg_date]     = parseInt(row.count);
+  Object.values(bucket).forEach(b => {
+    labels.push(b.label);
+    customerSeries.push(b.customer);
+    shopSeries.push(b.shop);
   });
 
   const ctx = document.getElementById("timelineChart").getContext("2d");
   if (timelineChart) timelineChart.destroy();
 
-  timelineChart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [
-        {
-          label: "Customers",
-          data: Object.values(customerMap),
-          borderColor: "#8b5cf6",
-          backgroundColor: "rgba(139,92,246,0.08)",
-          borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5,
-          fill: true, tension: 0.4,
+    timelineChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Customers",
+              data: customerSeries,
+              borderColor: "#8b5cf6",
+              backgroundColor: "rgba(139,92,246,0.08)",
+              borderWidth: 2.5,
+              pointRadius: (ctx) => ctx.raw > 0 ? 4 : 0,
+              pointHoverRadius: 6,
+              fill: true, tension: 0.4,
+            },
+            {
+              label: "Repair Shops",
+              data: shopSeries,
+              borderColor: "#f59e0b",
+              backgroundColor: "rgba(245,158,11,0.08)",
+              borderWidth: 2.5,
+              pointRadius: (ctx) => ctx.raw > 0 ? 4 : 0,
+              pointHoverRadius: 6,
+              fill: true, tension: 0.4,
+            }
+          ]
         },
-        {
-          label: "Repair Shops",
-          data: Object.values(shopMap),
-          borderColor: "#f59e0b",
-          backgroundColor: "rgba(245,158,11,0.08)",
-          borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5,
-          fill: true, tension: 0.4,
-        }
-      ]
-    },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1320,7 +1392,7 @@ function renderTimelineChart(dailyData) {
         tooltip: { bodyFont:{family:"Outfit"}, titleFont:{family:"Outfit"} }
       },
       scales: {
-        x: { grid:{display:false}, ticks:{ font:{size:10,family:"Outfit"}, color:"#94a3b8", maxTicksLimit:10 } },
+        x: { grid:{display:false}, ticks:{ font:{size:10,family:"Outfit"}, color:"#94a3b8", maxTicksLimit:12 } },
         y: { grid:{color:"#f1f5f9"}, ticks:{ font:{size:11,family:"Outfit"}, color:"#94a3b8", stepSize:1 }, beginAtZero:true }
       }
     }

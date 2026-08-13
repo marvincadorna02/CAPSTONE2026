@@ -14,11 +14,18 @@ $_SESSION['last_activity'] = time();
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] !== 'repairshop') { header("Location: dashboard.php"); exit(); }
 
-$userId   = $_SESSION['user_id'];
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+$userId   = (int) $_SESSION['user_id'];
 $userName = $_SESSION['name'];
 
 $conn = new mysqli("localhost", "root", "", "fixitdavao");
 if ($conn->connect_error) die("DB error: " . $conn->connect_error);
+
+// ── Auto-expire subscriptions past end_date (runs on every load) ──
+$conn->query("UPDATE shop_subscriptions SET status='expired' WHERE status='active' AND end_date < CURDATE()");
 
 // ── Load shop name + logo ─────────────────────────────────────
 $stmt = $conn->prepare("SELECT shop_name, logo_url FROM users WHERE id = ?");
@@ -61,6 +68,12 @@ while ($p = $plansResult->fetch_assoc()) $plans[] = $p;
 $msg = '';
 $msgType = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['plan_id'])) {
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Invalid request.");
+    }
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
     $planId    = (int) $_POST['plan_id'];
     $payRef    = trim($_POST['payment_ref'] ?? '');
     $gcashNum  = trim($_POST['gcash_number'] ?? '');
@@ -93,13 +106,16 @@ if (!in_array($mimeType, $allowedTypes)) {
     }
 
     // Cancel any previous pending
-    $conn->query("UPDATE shop_subscriptions SET status='rejected' WHERE shop_id=$userId AND status='pending'");
+    $cancelStmt = $conn->prepare("UPDATE shop_subscriptions SET status='rejected' WHERE shop_id=? AND status='pending'");
+    $cancelStmt->bind_param("i", $userId);
+    $cancelStmt->execute();
+    $cancelStmt->close();
 
     $stmt = $conn->prepare("
       INSERT INTO shop_subscriptions (shop_id, plan_id, status, payment_ref, gcash_screenshot, gcash_number, payment_method, bank_name)
       VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
   ");
-  $stmt->bind_param("iissss s", $userId, $planId, $payRef, $screenshotPath, $gcashNum, $paymentMethod, $bankName);
+  $stmt->bind_param("iisssss", $userId, $planId, $payRef, $screenshotPath, $gcashNum, $paymentMethod, $bankName);
     if ($stmt->execute()) {
         $msg     = 'Subscription request submitted! Wait for admin approval.';
         $msgType = 'success';
@@ -563,6 +579,7 @@ body.sidebar-open .sidebar-backdrop {
       </h2>
 
       <form method="POST" enctype="multipart/form-data" id="subForm">
+        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
         <div class="plans-grid">
           <?php foreach ($plans as $i => $plan): ?>
           <div class="plan-card <?php echo $i === 1 ? 'popular' : ''; ?>" onclick="selectPlan(<?php echo $plan['id']; ?>, <?php echo $plan['price']; ?>, '<?php echo addslashes($plan['name']); ?>')">

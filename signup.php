@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] === 'admin')       header("Location: admin/admin-dashboard.php");
     elseif ($_SESSION['role'] === 'repairshop') header("Location: shop-owner/shop-information.php");
@@ -54,6 +58,12 @@ $oldShopName = $_POST['shopName']  ?? '';
 $oldEmail    = $_POST['email']     ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Invalid request.");
+    }
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
     $role     = $_POST['userType']        ?? 'customer';
     $name     = trim($_POST['fullName']   ?? '');
     $shopName = trim($_POST['shopName']   ?? '');
@@ -341,6 +351,7 @@ $conn->close();
           <p class="subtext">Join Fix It Davao and get started today.</p>
 
           <form id="signupForm" method="POST" action="signup.php">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <div class="user-type-wrapper">
               <label class="section-label">Sign Up As</label>
               <div class="user-type-selection">

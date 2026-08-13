@@ -291,11 +291,12 @@ $conn->close();
       .user-type{flex:1;position:relative;}
       .user-type input{position:absolute;opacity:0;width:0;height:0;}
       .user-type span{
-        display:flex;align-items:center;justify-content:center;
-        padding:9px 6px;border-radius:9px;
-        font-size:12.5px;font-weight:600;color:rgba(255,255,255,0.5);
-        cursor:pointer;transition:all 0.2s;text-align:center;
-      }
+  display:flex;align-items:center;justify-content:center;
+  padding:9px 4px;border-radius:9px;
+  font-size:11.5px;font-weight:600;color:rgba(255,255,255,0.5);
+  cursor:pointer;transition:all 0.2s;text-align:center;
+  white-space:nowrap;
+}
       .user-type input:checked + span{
         background:linear-gradient(135deg,var(--accent),var(--accent-dark));
         color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3);
@@ -377,9 +378,10 @@ $conn->close();
       .dlg-btn.slate { background:linear-gradient(135deg,#64748b,#475569); box-shadow:0 4px 14px rgba(100,116,139,0.35); }
 
       @media(max-width:480px){
-        .auth-card{padding:28px 22px;}
-        .auth-card h1{font-size:22px;}
-      }
+    .auth-card{padding:28px 22px;}
+    .auth-card h1{font-size:22px;}
+    .user-type span{font-size:10.5px;padding:9px 2px;}
+  }
     </style>
   </head>
   <body>

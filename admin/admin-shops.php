@@ -551,16 +551,31 @@ function updateStats(shops) {
             <td>${joinDate}</td>
             <td><span class="status-badge ${isSuspended?'suspended-badge':'active-badge'}">${isSuspended?'Suspended':'Active'}</span>${reasonTag}</td>
             <td><div class="action-buttons">
-              <button class="btn-icon" title="View" onclick="viewShop(${s.id})"><img src="../assets/icons/view.svg" alt="View" /></button>
+              <button class="btn-icon" title="View" data-action="view" data-id="${s.id}"><img src="../assets/icons/view.svg" alt="View" /></button>
               ${isSuspended
-                ? `<button class="btn-icon success" title="Reactivate" onclick="reactivateShop(${s.id},this)"><img src="../assets/icons/view.svg" alt="Reactivate" /></button>`
-                : `<button class="btn-icon danger" title="Suspend" onclick="openSuspendModal(${s.id},'${escHtml(s.name)}')"><img src="../assets/icons/suspend.svg" alt="Suspend" /></button>`
+                ? `<button class="btn-icon success" title="Reactivate" data-action="reactivate" data-id="${s.id}"><img src="../assets/icons/view.svg" alt="Reactivate" /></button>`
+                : `<button class="btn-icon danger" title="Suspend" data-action="suspend" data-id="${s.id}" data-name="${escHtml(s.name)}"><img src="../assets/icons/suspend.svg" alt="Suspend" /></button>`
               }
             </div></td>
           </tr>`;
         }).join("");
         updatePagination(filteredShops.length);
       }
+
+      // Delegated click handler for row action buttons.
+      // Using data-* attributes + delegation (instead of inline onclick="fn('${name}')")
+      // avoids breakage when a shop name contains an apostrophe/quote — inline
+      // onclick strings get HTML-entity-decoded by the browser BEFORE being
+      // compiled as JS, so an escaped "&#39;" turns back into a real "'" and
+      // splits the string, causing "missing ) after argument list".
+      document.getElementById("shopsTableBody").addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (btn.dataset.action === "view") viewShop(id);
+        else if (btn.dataset.action === "reactivate") reactivateShop(id, btn);
+        else if (btn.dataset.action === "suspend") openSuspendModal(id, btn.dataset.name);
+      });
 
       function updatePagination(total) {
         const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
@@ -655,7 +670,7 @@ function viewShop(id) {
 }
 
       function escHtml(str) {
-        return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
       }
 
       async function loadShops() {

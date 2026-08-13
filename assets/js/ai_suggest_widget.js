@@ -196,7 +196,7 @@ function initAISuggest(options) {
     showLoading();
 
     try {
-      const res = await fetch('../../api/ai_suggest.php', {
+      const res = await fetch('../api/ai_suggest.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
        body: JSON.stringify({

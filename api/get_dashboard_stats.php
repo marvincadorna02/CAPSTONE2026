@@ -98,15 +98,14 @@ while ($row = $trendRes->fetch_assoc()) {
 }
 
 
-// ── Daily registrations last 30 days ─────────────────
+// ── Daily registrations (all time) ─────────────────
 $dailyResult = $conn->query("
-    SELECT 
+    SELECT
         DATE(created_at) as reg_date,
         role,
         COUNT(*) as count
     FROM users
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    AND role IN ('customer', 'repairshop')
+    WHERE role IN ('customer', 'repairshop')
     GROUP BY DATE(created_at), role
     ORDER BY reg_date ASC
 ");
