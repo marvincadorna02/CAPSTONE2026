@@ -317,14 +317,14 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         position: fixed;
         inset: 0;
         background: rgba(0,0,0,0.4);
-        z-index: 900; /* ubos sa sidebar pero taas sa content */
+        z-index: 900;
       }
       body.sidebar-open .sidebar-backdrop {
         display: block;
       }
 
       .sidebar {
-        z-index: 950; /* mas taas kaysa backdrop (900) */
+        z-index: 950;
       }
 
     </style>

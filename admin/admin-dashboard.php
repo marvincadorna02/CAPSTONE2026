@@ -6,13 +6,13 @@ $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
     session_destroy();
-    header("../login.php?timeout=1");
+    header("Location: ../login.php?timeout=1");
     exit();
 }
 $_SESSION['last_activity'] = time();
 
-if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
-if ($_SESSION['role'] !== 'admin') { header("../shop-owner/dashboard.php"); exit(); }
+if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
+if ($_SESSION['role'] !== 'admin') { header("Location: ../shop-owner/dashboard.php"); exit(); }
 
 $userName  = $_SESSION['name'];
 $userInitials = strtoupper(substr($userName, 0, 2));
@@ -20,6 +20,11 @@ $userInitials = strtoupper(substr($userName, 0, 2));
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+if (window.top !== window.self) {
+  window.top.location.href = window.location.href;
+}
+</script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Dashboard - Fix It Davao</title>

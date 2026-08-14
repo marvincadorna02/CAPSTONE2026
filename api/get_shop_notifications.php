@@ -51,6 +51,15 @@ $conn->query("CREATE TABLE IF NOT EXISTS reschedule_notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
 
+$conn->query("CREATE TABLE IF NOT EXISTS subscription_notification_reads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    shop_id INT NOT NULL,
+    subscription_id INT NOT NULL,
+    status_seen VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_sub_notif (shop_id, subscription_id, status_seen)
+)");
+
 // Handle mark all read
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
@@ -68,6 +77,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               AND r.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         $conn->query("UPDATE reschedule_notifications SET is_read = 1
             WHERE shop_id = $userId AND is_read = 0");
+            $conn->query("INSERT IGNORE INTO subscription_notification_reads (shop_id, subscription_id, status_seen)
+            SELECT $userId, ss.id, ss.status
+            FROM shop_subscriptions ss
+            WHERE ss.shop_id = $userId
+              AND ss.status IN ('active','rejected')
+              AND ss.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         echo json_encode(['success' => true]);
         $conn->close(); exit();
     }
@@ -189,6 +204,43 @@ if ($reviewTableCheck && $reviewTableCheck->num_rows > 0) {
         ];
     }
     $stmt2->close();
+}
+
+// ── 4. Fetch subscription approval/rejection notifications ────
+$subTableCheck = $conn->query("SHOW TABLES LIKE 'shop_subscriptions'");
+if ($subTableCheck && $subTableCheck->num_rows > 0) {
+    $stmt4 = $conn->prepare("
+        SELECT
+            ss.id AS subscription_id,
+            ss.status,
+            ss.updated_at,
+            sp.name AS plan_name,
+            (SELECT COUNT(*) FROM subscription_notification_reads snr
+             WHERE snr.shop_id = ? AND snr.subscription_id = ss.id AND snr.status_seen = ss.status) AS is_read
+        FROM shop_subscriptions ss
+        LEFT JOIN subscription_plans sp ON sp.id = ss.plan_id
+        WHERE ss.shop_id = ?
+          AND ss.status IN ('active','rejected')
+          AND ss.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ORDER BY ss.updated_at DESC
+        LIMIT 5
+    ");
+    $stmt4->bind_param("ii", $userId, $userId);
+    $stmt4->execute();
+    $result4 = $stmt4->get_result();
+    while ($row = $result4->fetch_assoc()) {
+        $notifications[] = [
+            'type'          => 'subscription',
+            'subscription_id' => $row['subscription_id'],
+            'status'        => $row['status'], // 'active' (approved) or 'rejected'
+            'plan_name'     => $row['plan_name'],
+            'customer_name' => null,
+            'service_name'  => null,
+            'is_read'       => (bool)$row['is_read'],
+            'time'          => $row['updated_at'],
+        ];
+    }
+    $stmt4->close();
 }
 
 // ── Sort all by time DESC (newest first) ──────────────────────

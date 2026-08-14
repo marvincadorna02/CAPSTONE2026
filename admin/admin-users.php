@@ -455,14 +455,14 @@ function updateStats(users) {
       }
 
       // ── Helper: profile pic (any role) > shop logo > colored initials ──
-      function userAvatarUrl(role, name, logoUrl, profilePic) {   // ← gidungag ang 4th param
+      function userAvatarUrl(role, name, logoUrl, profilePic) {
       if (profilePic) return profilePic;
       if (role === "repairshop" && logoUrl) return logoUrl;
       const color = role === "admin" ? "ef4444" : role === "repairshop" ? "f59e0b" : "3b82f6";
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=64`;
       }
 
-      // ── Helper: 3 months = inactive threshold ── ← DUNGAG DIRI
+      // ── Helper: 3 months = inactive threshold ──
       function isInactive(lastLogin) {
       if (!lastLogin) return true;
       const monthsAgo = (Date.now() - new Date(lastLogin)) / (1000 * 60 * 60 * 24 * 30);

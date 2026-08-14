@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/env.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -40,11 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';
                 $mail->SMTPAuth   = true;
-                $mail->Username   = 'marvincadorna07@gmail.com'; // ← i-change
-                $mail->Password   = 'hynl joqd gfhs qyus';     // ← i-change
+                $mail->Username   = $_ENV['MAIL_USERNAME'];
+                $mail->Password   = $_ENV['MAIL_PASSWORD'];
                 $mail->SMTPSecure = 'tls';
                 $mail->Port       = 587;
-                $mail->setFrom('marvincadorna07@gmail.com', 'Fix It Davao');
+                $mail->setFrom($_ENV['MAIL_USERNAME'], $_ENV['MAIL_FROM_NAME']);
                 $mail->addAddress($email, $user['name']);
                 $mail->isHTML(true);
                 $mail->Subject = 'Reset Your Password - Fix It Davao';

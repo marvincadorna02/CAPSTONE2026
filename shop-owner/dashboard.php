@@ -6,13 +6,13 @@ $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
     session_destroy();
-    header("../login.php?timeout=1");
+    header("Location: ../login.php?timeout=1");
     exit();
 }
 $_SESSION['last_activity'] = time();
 
-if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
-if ($_SESSION['role'] === 'admin') { header("../admin/admin-dashboard.php"); exit(); }
+if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
+if ($_SESSION['role'] === 'admin') { header("Location: ../admin/admin-dashboard.php"); exit(); }
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -32,6 +32,12 @@ $bodyClass = "role-{$userRole}";
 <!doctype html>
 <html lang="en">
 <head>
+    <script>
+// Break out of the login/signup iframe modal once we've landed on a real page
+if (window.top !== window.self) {
+  window.top.location.href = window.location.href;
+}
+</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="format-detection" content="address=no, telephone=no" />

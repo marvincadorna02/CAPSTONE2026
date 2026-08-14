@@ -632,18 +632,23 @@ async function loadNotifications() {
   review:    `<svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="10" fill="#8b5cf6"/><text x="12" y="16" text-anchor="middle" font-size="11" fill="white">★</text></svg>`,
 };
 
-    const AVATAR_BG = { pending: 'f59e0b', cancelled: 'ef4444', review: '8b5cf6' };
+    const AVATAR_BG = { pending: 'f59e0b', cancelled: 'ef4444', review: '8b5cf6', active: '10b981', rejected: 'ef4444' };
 
     list.innerHTML = data.notifications.map(n => {
       const time = n.time
         ? new Date(n.time).toLocaleDateString('en-PH', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
         : '';
       const bg      = n.is_read ? '' : 'background:#fffbeb;';
-      const dest    = n.type === 'review' ? 'shop-reviews.php' : 'shop-bookings.php';
+      const dest    = n.type === 'review' ? 'shop-reviews.php' : n.type === 'subscription' ? 'shop-subscription.php' : 'shop-bookings.php';
       const avatarBg = AVATAR_BG[n.status] || '94a3b8';
-      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(n.customer_name || 'Customer')}&background=${avatarBg}&color=fff&size=80`;
+      const displayName = n.type === 'subscription' ? 'Subscription' : (n.customer_name || 'Customer');
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=${avatarBg}&color=fff&size=80`;
 
-     const msgText = n.type === 'reschedule'
+const msgText = n.type === 'subscription'
+  ? (n.status === 'active'
+      ? `Your ${n.plan_name || ''} subscription was approved ✅`
+      : `Your ${n.plan_name || ''} subscription was declined`)
+  : n.type === 'reschedule'
   ? `${n.customer_name} has rescheduled their booking 📅`
   : n.type === 'review'
     ? 'Left you a review'
@@ -670,7 +675,7 @@ async function loadNotifications() {
             onerror="this.src='https://ui-avatars.com/api/?name=Customer&background=94a3b8&color=fff&size=80'" />
           <div style="flex:1;min-width:0;">
             <div style="display:flex;align-items:center;gap:5px;">
-              <span style="font-size:.82rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.customer_name || 'Customer'}</span>
+              <span style="font-size:.82rem;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${displayName}</span>
               ${ICON[n.status] || ''}
             </div>
             <div style="font-size:.75rem;color:#64748b;margin-top:1px;">${msgText}</div>

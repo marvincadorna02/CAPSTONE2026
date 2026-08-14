@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/env.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -146,15 +147,14 @@ if (empty($shopEmail)) {
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-            $mail->Username   = 'marvincadorna07@gmail.com';
-            $mail->Password   = 'hynl joqd gfhs qyus';
+            $mail->Username   = $_ENV['MAIL_USERNAME'];
+            $mail->Password   = $_ENV['MAIL_PASSWORD'];
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
 
-            // FIX 4: CharSet for proper email rendering
             $mail->CharSet    = 'UTF-8';
 
-            $mail->setFrom('marvincadorna07@gmail.com', 'Fix It Davao');
+            $mail->setFrom($_ENV['MAIL_USERNAME'], $_ENV['MAIL_FROM_NAME']);
             $mail->addAddress($shopEmail, $booking['shop_owner_name'] ?? '');
 
             $oldDateFmt = date('F j, Y', strtotime($oldDate));
