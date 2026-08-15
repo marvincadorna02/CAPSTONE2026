@@ -41,6 +41,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS reschedule_notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     shop_id INT NOT NULL,
     booking_id INT NOT NULL,
+    customer_id INT DEFAULT NULL,
     customer_name VARCHAR(255) NOT NULL,
     service_name VARCHAR(255) DEFAULT NULL,
     old_date DATE NOT NULL,
@@ -95,12 +96,14 @@ $notifications = [];
 $rescheduledBookingIds = [];
 
 $stmt3 = $conn->prepare("
-    SELECT id, booking_id, customer_name, service_name,
-           old_date, old_time, new_date, new_time, is_read, created_at
-    FROM reschedule_notifications
-    WHERE shop_id = ?
-      AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    ORDER BY created_at DESC
+    SELECT rn.id, rn.booking_id, rn.customer_name, rn.service_name,
+           rn.old_date, rn.old_time, rn.new_date, rn.new_time, rn.is_read, rn.created_at,
+           u.profile_picture AS customer_picture
+    FROM reschedule_notifications rn
+    LEFT JOIN users u ON u.id = rn.customer_id
+    WHERE rn.shop_id = ?
+      AND rn.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ORDER BY rn.created_at DESC
     LIMIT 10
 ");
 $stmt3->bind_param("i", $userId);
@@ -113,6 +116,7 @@ while ($row = $result3->fetch_assoc()) {
         'booking_id'    => $row['booking_id'],
         'status'        => 'rescheduled',
         'customer_name' => $row['customer_name'],
+        'customer_picture' => $row['customer_picture'] ?? null,
         'service_name'  => $row['service_name'],
         'old_date'      => $row['old_date'],
         'old_time'      => $row['old_time'],
@@ -140,9 +144,11 @@ $stmt = $conn->prepare("
         b.created_at,
         b.customer_name,
         b.service_name,
+        u.profile_picture AS customer_picture,
         (SELECT COUNT(*) FROM shop_notification_reads nr
          WHERE nr.shop_id = ? AND nr.booking_id = b.id AND nr.status_seen = b.status) AS is_read
     FROM bookings b
+    LEFT JOIN users u ON u.id = b.customer_id
     WHERE b.shop_id = ?
       AND b.status IN ('pending','confirmed','completed','cancelled')
       AND b.id NOT IN ($excludeIds)
@@ -160,6 +166,7 @@ while ($row = $result->fetch_assoc()) {
         'booking_id'    => $row['booking_id'],
         'status'        => $row['status'],
         'customer_name' => $row['customer_name'],
+        'customer_picture' => $row['customer_picture'] ?? null,
         'service_name'  => $row['service_name'],
         'booking_date'  => $row['booking_date'],
         'is_read'       => (bool)$row['is_read'],
@@ -178,6 +185,7 @@ if ($reviewTableCheck && $reviewTableCheck->num_rows > 0) {
             r.comment,
             r.created_at,
             u.name AS customer_name,
+            u.profile_picture AS customer_picture,
             (SELECT COUNT(*) FROM shop_review_reads rr
              WHERE rr.shop_id = ? AND rr.review_id = r.id) AS is_read
         FROM reviews r
@@ -198,6 +206,7 @@ if ($reviewTableCheck && $reviewTableCheck->num_rows > 0) {
             'rating'        => (int)$row['rating'],
             'comment'       => $row['comment'],
             'customer_name' => $row['customer_name'] ?? 'A customer',
+            'customer_picture' => $row['customer_picture'] ?? null,
             'service_name'  => null,
             'is_read'       => (bool)$row['is_read'],
             'time'          => $row['created_at'],

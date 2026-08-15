@@ -84,6 +84,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS reschedule_notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     shop_id INT NOT NULL,
     booking_id INT NOT NULL,
+    customer_id INT DEFAULT NULL,
     customer_name VARCHAR(255) NOT NULL,
     service_name VARCHAR(255) DEFAULT NULL,
     old_date DATE NOT NULL,
@@ -96,13 +97,14 @@ $conn->query("CREATE TABLE IF NOT EXISTS reschedule_notifications (
 
 $notifStmt = $conn->prepare("
     INSERT INTO reschedule_notifications
-        (shop_id, booking_id, customer_name, service_name, old_date, old_time, new_date, new_time)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (shop_id, booking_id, customer_id, customer_name, service_name, old_date, old_time, new_date, new_time)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 $notifStmt->bind_param(
-    "iissssss",
+    "iiissssss",
     $booking['shop_id'],
     $bookingId,
+    $customerId,
     $booking['customer_name'],
     $booking['service_name'],
     $oldDate,

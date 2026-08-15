@@ -1316,8 +1316,7 @@ const sorted = allShops
       }
       if (!data.notifications || !data.notifications.length) {
         list.innerHTML = `<div class="notif-empty" style="padding:2rem 1rem;text-align:center;">
-          <div style="font-size:1.8rem;margin-bottom:8px;opacity:.4;">🔔</div>
-          <div style="font-size:.78rem;color:var(--text-muted);">No notifications yet.<br><small>You'll be notified when a shop updates your booking.</small></div>
+          <div style="font-size:.78rem;color:var(--text-muted);">No notifications yet.</div>
         </div>`;
         return;
       }
