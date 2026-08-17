@@ -915,7 +915,7 @@ document.querySelectorAll('.sidebar .nav-item').forEach(link => {
     document.getElementById('sdmName').textContent         = s.name;
     document.getElementById('sdmLocationText').textContent = s.location || 'Location not set';
     document.getElementById('sdmContactText').textContent  = s.contact  || 'No contact info';
-    document.getElementById('sdmBookBtn').href             = `book-shop.php?id=${s.id}`;
+    document.getElementById('sdmBookBtn').href = `../customer/book-shop.php?id=${s.id}`;
 
     const avg = parseFloat(s.avg_rating) || 0;
     const cnt = parseInt(s.review_count) || 0;

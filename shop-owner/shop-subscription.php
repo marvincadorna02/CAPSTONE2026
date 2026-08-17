@@ -581,8 +581,19 @@
           <form method="POST" enctype="multipart/form-data" id="subForm">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <div class="plans-grid">
-              <?php foreach ($plans as $i => $plan): ?>
-              <div class="plan-card <?php echo $i === 1 ? 'popular' : ''; ?>" onclick="selectPlan(<?php echo $plan['id']; ?>, <?php echo $plan['price']; ?>, '<?php echo addslashes($plan['name']); ?>')">
+              <?php
+// ── Current plan id, para ma-preselect dayon kung naa nay subscription (active o expired) ──
+$currentPlanId = ($currentSub && in_array($currentSub['status'], ['active', 'expired'], true))
+    ? (int) $currentSub['plan_id']
+    : null;
+?>
+<?php foreach ($plans as $i => $plan): ?>
+<?php $isCurrentPlan = ($currentPlanId !== null && (int)$plan['id'] === $currentPlanId); ?>
+<div class="plan-card <?php echo $i === 1 ? 'popular' : ''; ?> <?php echo $isCurrentPlan ? 'selected' : ''; ?>"
+  data-plan-id="<?php echo $plan['id']; ?>"
+  data-plan-price="<?php echo $plan['price']; ?>"
+  data-plan-name="<?php echo htmlspecialchars($plan['name'], ENT_QUOTES); ?>"
+  onclick="selectPlan(<?php echo $plan['id']; ?>, <?php echo $plan['price']; ?>, '<?php echo addslashes($plan['name']); ?>')">
                 <?php if ($i === 1): ?>
                 <div class="plan-popular-tag"><img src="../assets/icons/shine.svg" width="12" height="12" style="filter:brightness(0) invert(1);vertical-align:middle;margin-right:3px;"> Most Popular</div>
                 <?php endif; ?>
@@ -925,7 +936,7 @@
   <img src="${avatarUrl}"
     style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid #e2e8f0;"
     onerror="this.src='https://ui-avatars.com/api/?name=Customer&background=94a3b8&color=fff&size=80'" />
-  <div style="flex:1;min-width:0;">
+  <div style="flex:1;min-width:0;">                                                                                                                                                             
                   <div style="font-size:.82rem;font-weight:800;color:#0f172a;">${displayName}</div>
                   <div style="font-size:.75rem;color:#64748b;margin-top:1px;">${msgText}</div>
                   ${n.service_name ? `<div style="font-size:.72rem;color:#d97706;margin-top:2px;">🔧 ${n.service_name}</div>` : ''}

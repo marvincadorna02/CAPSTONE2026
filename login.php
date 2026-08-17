@@ -31,42 +31,62 @@ if ($conn->connect_error) {
 
 // ── Brute Force Protection ────────────────────────────────────
 define('MAX_ATTEMPTS',    5);
-define('LOCKOUT_MINUTES', 15);
+define('LOCKOUT_MINUTES', 1);
 
-function getLoginAttempts($conn, $email, $ip) {
+function getLoginAttempts($conn, $email, $ip, $loginType) {
     $window = date('Y-m-d H:i:s', strtotime('-' . LOCKOUT_MINUTES . ' minutes'));
     $stmt   = $conn->prepare(
         "SELECT COUNT(*) as cnt FROM login_attempts
-         WHERE (email = ? OR ip_address = ?) AND attempted_at > ?"
+         WHERE email = ? AND login_type = ? AND attempted_at > ?"
     );
-    $stmt->bind_param("sss", $email, $ip, $window);
+    $stmt->bind_param("sss", $email, $loginType, $window);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc()['cnt'];
 }
 
-function recordLoginAttempt($conn, $email, $ip) {
+function recordLoginAttempt($conn, $email, $ip, $loginType) {
     $stmt = $conn->prepare(
-        "INSERT INTO login_attempts (email, ip_address) VALUES (?, ?)"
+        "INSERT INTO login_attempts (email, ip_address, login_type) VALUES (?, ?, ?)"
     );
-    $stmt->bind_param("ss", $email, $ip);
+    $stmt->bind_param("sss", $email, $ip, $loginType);
     $stmt->execute();
 }
 
-function clearLoginAttempts($conn, $email, $ip) {
+function clearLoginAttempts($conn, $email, $ip, $loginType) {
     $stmt = $conn->prepare(
-        "DELETE FROM login_attempts WHERE email = ? OR ip_address = ?"
+        "DELETE FROM login_attempts WHERE email = ? AND login_type = ?"
     );
-    $stmt->bind_param("ss", $email, $ip);
+    $stmt->bind_param("ss", $email, $loginType);
     $stmt->execute();
 }
 
+function getLockoutSecondsLeft($conn, $email, $ip, $loginType) {
+    $stmt = $conn->prepare(
+        "SELECT attempted_at FROM login_attempts
+         WHERE email = ? AND login_type = ?
+         ORDER BY attempted_at ASC LIMIT " . MAX_ATTEMPTS
+    );
+    $stmt->bind_param("ss", $email, $loginType);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = $result->fetch_all(MYSQLI_ASSOC);
+
+    if (count($rows) < MAX_ATTEMPTS) return 0;
+
+    $oldest = strtotime($rows[0]['attempted_at']);
+    $unlockAt = $oldest + (LOCKOUT_MINUTES * 60);
+    $secondsLeft = $unlockAt - time();
+
+    return max(0, $secondsLeft);
+}
 $userIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
 $userIp = trim(explode(',', $userIp)[0]);
 
 // ── Handle POST ───────────────────────────────────────────────
-$error      = "";
-$errorTitle = "";
-$errorType  = "general";
+$error              = "";
+$errorTitle         = "";
+$errorType          = "general";
+$lockoutSecondsLeft = 0;
 
 // Session timeout message
 if (isset($_GET['timeout'])) {
@@ -90,12 +110,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password']  ?? '';
 
+    $loginType = in_array($role, ['admin', 'customer', 'repairshop'], true) ? $role : 'customer';
+
     // ── Brute force check ─────────────────────────────────────
     $checkEmail = !empty($email) ? $email : $username . '@admin';
-    $attempts   = getLoginAttempts($conn, $checkEmail, $userIp);
+    $attempts   = getLoginAttempts($conn, $checkEmail, $userIp, $loginType);
     if ($attempts >= MAX_ATTEMPTS) {
+        $lockoutSecondsLeft = getLockoutSecondsLeft($conn, $checkEmail, $userIp, $loginType);
         $errorTitle = "Too Many Attempts!";
-        $error      = "Too many failed login attempts. Please wait <strong>" . LOCKOUT_MINUTES . " minutes</strong> before trying again.";
+        $error      = "Too many failed login attempts. Please wait before trying again.";
         $errorType  = "suspended";
     }
 
@@ -104,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($role === 'admin') {
             if ($username === 'admin' && $password === 'admin123') {
                 session_regenerate_id(true);
-                clearLoginAttempts($conn, 'admin@admin', $userIp);
+                clearLoginAttempts($conn, 'admin@admin', $userIp, $loginType);
                 $_SESSION['user_id'] = 0;
                 $_SESSION['name']    = 'Admin User';
                 $_SESSION['email']   = 'admin@fixitdavao.com';
@@ -115,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorTitle = "Invalid Credentials!";
                 $error      = "The username or password you entered is incorrect.";
                 $errorType  = "general";
-                recordLoginAttempt($conn, 'admin@admin', $userIp);
+                recordLoginAttempt($conn, 'admin@admin', $userIp, $loginType);
             }
 
         // ── Customer / Repair Shop login ──────────────────────
@@ -162,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // ── All clear — create session ─────────────
                     if (empty($error)) {
                         session_regenerate_id(true);
-                        clearLoginAttempts($conn, $email, $userIp);
+                        clearLoginAttempts($conn, $email, $userIp, $loginType);
                         $_SESSION['user_id'] = $user['id'];
                         $_SESSION['name']    = $user['name'];
                         $_SESSION['email']   = $user['email'];
@@ -190,13 +213,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $errorTitle = "Invalid Credentials!";
                             $error      = "The email or password you entered is incorrect.";
                             $errorType  = "general";
-                            recordLoginAttempt($conn, $email, $userIp);
+                            recordLoginAttempt($conn, $email, $userIp, $loginType);
                         }
                     } else {
                         $errorTitle = "Invalid Credentials!";
                         $error      = "The email or password you entered is incorrect.";
                         $errorType  = "general";
-                        recordLoginAttempt($conn, $email, $userIp);
+                        recordLoginAttempt($conn, $email, $userIp, $loginType);
                     }
                 }
             }
@@ -235,7 +258,6 @@ $conn->close();
         position:relative;
       }
 
-      /* ── BACKGROUND FX (same as home.php hero) ── */
       .bg-grid{
         position:fixed;inset:0;z-index:0;
         background-image:linear-gradient(rgba(245,158,11,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,0.05) 1px,transparent 1px);
@@ -254,7 +276,6 @@ $conn->close();
         pointer-events:none;
       }
 
-      /* ── AUTH SECTION (fills modal, no navbar/badge, no scroll) ── */
       .auth-wrap{
         position:relative;z-index:2;
         height:100vh;
@@ -262,7 +283,6 @@ $conn->close();
         padding:10px 30px;
       }
 
-      /* ── FLOATING CARD (matches home.php .float-card style) ── */
       .auth-card{
         width:100%;
         background:rgba(30,41,59,0.85);
@@ -281,7 +301,6 @@ $conn->close();
         font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:22px;
       }
 
-      /* Role tabs */
       .section-label{
         display:block;font-size:11px;font-weight:700;letter-spacing:1px;
         color:rgba(255,255,255,0.5);text-transform:uppercase;margin-bottom:10px;
@@ -302,7 +321,6 @@ $conn->close();
         color:#fff;box-shadow:0 4px 14px rgba(245,158,11,0.3);
       }
 
-      /* Form fields */
       .form-group{margin-bottom:12px;}
       .form-group input{
         width:100%;padding:12px 16px;
@@ -348,7 +366,6 @@ $conn->close();
 
       .footer{display:none;}
 
-      /* ── DIALOG ── */
       .dialog-overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.8); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 20px; }
       .dialog-overlay.visible { opacity: 1; pointer-events: all; }
       .dialog-box { background: #0f172a; border: 1px solid rgba(245,158,11,0.2); border-radius: 24px; max-width: 400px; width: 100%; box-shadow: 0 40px 100px rgba(0,0,0,0.5); transform: scale(0.88) translateY(28px); transition: transform 0.38s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease; opacity: 0; overflow: hidden; }
@@ -373,6 +390,7 @@ $conn->close();
 
       .dlg-btn { width:100%; padding:12px; border:none; border-radius:12px; font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; cursor:pointer; transition:all 0.25s ease; color:white; }
       .dlg-btn:hover { transform:translateY(-2px); }
+      .dlg-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
       .dlg-btn.red   { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 4px 14px rgba(239,68,68,0.35); }
       .dlg-btn.amber { background:linear-gradient(135deg,#f59e0b,#d97706); box-shadow:0 4px 14px rgba(245,158,11,0.35); }
       .dlg-btn.slate { background:linear-gradient(135deg,#64748b,#475569); box-shadow:0 4px 14px rgba(100,116,139,0.35); }
@@ -485,7 +503,8 @@ $conn->close();
         showDialog(
           <?php echo json_encode($errorTitle); ?>,
           <?php echo json_encode($error); ?>,
-          <?php echo json_encode($errorType); ?>
+          <?php echo json_encode($errorType); ?>,
+          <?php echo json_encode($lockoutSecondsLeft); ?>
         );
       });
       <?php endif; ?>
@@ -524,11 +543,18 @@ $conn->close();
       const dlgBtn        = document.getElementById("dlgBtn");
       const dlgIconSvg    = document.getElementById("dlgIconSvg");
 
-      let currentReset = false;
+      let currentReset      = false;
+      let countdownInterval = null;
 
-      function showDialog(title, message, type) {
+      function showDialog(title, message, type, secondsLeft = 0) {
         const cfg = DIALOG_CFG[type] || DIALOG_CFG.general;
         currentReset = cfg.reset;
+
+        // Clear any previous countdown running
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
 
         dlgHeader.className   = `dlg-header ${cfg.color}`;
         dlgTitle.textContent  = title;
@@ -536,18 +562,48 @@ $conn->close();
         dlgInfo.className     = `dlg-info ${cfg.color}`;
         dlgInfo.innerHTML     = message;
         dlgBtn.className      = `dlg-btn ${cfg.color}`;
-        dlgBtn.textContent    = cfg.btnText;
 
         const icon  = dlgHeader.querySelector(".dlg-icon");
         const clone = icon.cloneNode(true);
         icon.parentNode.replaceChild(clone, icon);
         clone.querySelector("svg").innerHTML = cfg.icon;
 
+        if (secondsLeft > 0) {
+          dlgBtn.disabled = true;
+          let remaining = secondsLeft;
+
+          const updateBtn = () => {
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+            dlgBtn.textContent = `Wait ${timeStr}...`;
+
+            if (remaining <= 0) {
+              clearInterval(countdownInterval);
+              countdownInterval = null;
+              dlgBtn.disabled = false;
+              dlgBtn.textContent = cfg.btnText;
+              return;
+            }
+            remaining--;
+          };
+
+          updateBtn();
+          countdownInterval = setInterval(updateBtn, 1000);
+        } else {
+          dlgBtn.disabled = false;
+          dlgBtn.textContent = cfg.btnText;
+        }
+
         dialogOverlay.classList.add("visible");
       }
 
       function hideDialog() {
         dialogOverlay.classList.remove("visible");
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
         if (currentReset) {
           document.getElementById("emailInput").classList.remove("input-error");
           document.getElementById("usernameInput").classList.remove("input-error");
@@ -557,8 +613,12 @@ $conn->close();
         }
       }
 
-      dlgBtn.addEventListener("click", hideDialog);
-      dialogOverlay.addEventListener("click", e => { if (e.target === dialogOverlay) hideDialog(); });
+      dlgBtn.addEventListener("click", function() {
+        if (!dlgBtn.disabled) hideDialog();
+      });
+      dialogOverlay.addEventListener("click", e => {
+        if (e.target === dialogOverlay && !dlgBtn.disabled) hideDialog();
+      });
 
       function togglePasswordVisibility(fieldId) {
         const field = document.getElementById(fieldId);
