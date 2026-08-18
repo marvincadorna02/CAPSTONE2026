@@ -80,8 +80,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errorTitle = "Fields Required"; $error = "Please fill in all fields before signing up."; $errorType = "general";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errorTitle = "Invalid Email"; $error = "Please enter a valid email address."; $errorType = "general";
-    } elseif (strlen($password) < 6) {
-        $errorTitle = "Weak Password"; $error = "Your password must be at least 6 characters long."; $errorType = "general";
+        } elseif (strlen($password) < 8 || strlen($password) > 16) {
+        $errorTitle = "Weak Password";
+        $error = "Password must be 8 to 16 characters long.";
+        $errorType = "general";
+    } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,16}$/', $password)) {
+        $errorTitle = "Weak Password";
+        $error = "Password must include an uppercase letter, lowercase letter, number, and special character.";
+        $errorType = "general";
     } elseif ($password !== $confirm) {
         $errorTitle = "Passwords Don't Match"; $error = "The passwords you entered do not match. Please re-enter them carefully."; $errorType = "mismatch";
     } elseif (!$terms) {
@@ -389,7 +395,10 @@ $conn->close();
             <div class="form-group">
               <div class="password-wrapper">
                 <input type="password" id="password" name="password" placeholder="Password" required
-                  <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
+                    minlength="8" maxlength="16"
+                    pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,16}"
+                    title="8-16 characters, with uppercase, lowercase, number, and special character"
+                    <?php echo !empty($error) ? 'class="input-error"' : ''; ?> />
                 <span class="toggle-password" onclick="togglePasswordVisibility('password')">
                   <svg id="eyeIcon-password" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
