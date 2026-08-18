@@ -182,15 +182,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $errorType  = "suspended";
                     }
 
-                    // ── All clear — create session ─────────────
+                    // ── All clear — trusted device? skip OTP. Else send OTP ───
                     if (empty($error)) {
-                        session_regenerate_id(true);
+                        require_once 'includes/otp-functions.php';
                         clearLoginAttempts($conn, $email, $userIp, $loginType);
-                        $_SESSION['user_id'] = $user['id'];
-                        $_SESSION['name']    = $user['name'];
-                        $_SESSION['email']   = $user['email'];
-                        $_SESSION['role']    = $user['role'];
-                        header("Location: " . ($user['role'] === 'repairshop' ? 'shop-owner/shop-information.php' : 'shop-owner/dashboard.php'));
+
+                        if (isTrustedDevice($conn, $user['id'])) {
+                            // Known device — log in directly, no OTP needed
+                            session_regenerate_id(true);
+                            $_SESSION['user_id'] = $user['id'];
+                            $_SESSION['name']    = $user['name'];
+                            $_SESSION['email']   = $user['email'];
+                            $_SESSION['role']    = $user['role'];
+                            header("Location: " . ($user['role'] === 'repairshop' ? 'shop-owner/shop-information.php' : 'shop-owner/dashboard.php'));
+                            exit();
+                        }
+
+                        session_regenerate_id(true);
+                        $_SESSION['pending_user_id'] = $user['id'];
+                        $_SESSION['pending_role']    = $user['role'];
+                        $_SESSION['pending_name']    = $user['name'];
+                        $_SESSION['pending_email']   = $user['email'];
+
+                        $sent = generateAndSendOTP($conn, $user['id'], $user['email'], $user['name']);
+
+                        if ($sent) {
+                            header("Location: verify-otp.php");
+                        } else {
+                            $errorTitle = "Email Error";
+                            $error      = "Failed to send verification code. Please try again.";
+                            $errorType  = "general";
+                        }
                         exit();
                     }
 
