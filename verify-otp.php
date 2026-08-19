@@ -111,6 +111,11 @@ $conn->close();
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <script>
+if (window.top !== window.self) {
+  window.top.location.href = window.location.href;
+}
+</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verify Code - Fix It Davao</title>
     <link rel="icon" type="image/png" href="assets/images/logo.png" />

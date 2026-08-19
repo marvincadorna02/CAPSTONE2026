@@ -413,15 +413,23 @@ body.sidebar-open .sidebar-backdrop {
                 <div class="form-group full-width" id="mapPickerSection">
                   <label>Pin Your Shop Location <span style="color:#94a3b8;font-weight:400;font-size:.78rem;">(click map to set)</span></label>
 <div style="display:flex;gap:8px;margin-bottom:8px;">
-  <input type="text" id="mapSearchInput" placeholder="Search address (e.g., Matina, Davao City)..."
+ <input type="text" id="mapSearchInput" placeholder="Search address (e.g., Matina, Davao City)..."
+    <?php echo ($savedLat && $savedLng) ? 'disabled' : ''; ?>
     style="flex:1;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.83rem;font-family:'Outfit',sans-serif;outline:none;" />
   <button type="button" id="mapSearchBtn"
+    <?php echo ($savedLat && $savedLng) ? 'disabled' : ''; ?>
     style="padding:9px 16px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;font-weight:700;font-size:.83rem;border:none;border-radius:10px;cursor:pointer;font-family:'Outfit',sans-serif;white-space:nowrap;">
     Search
   </button>
 </div>
 <div id="shopMapPicker"></div>
-                  <div class="map-picker-hint">Click anywhere on the map to drop your shop pin</div>
+                  <div class="map-picker-hint" id="mapPickerHint">
+                      <?php if ($savedLat && $savedLng): ?>
+                  Location locked. <button type="button" id="unlockMapBtn" style="background:none;border:none;color:#f59e0b;font-weight:700;text-decoration:underline;cursor:pointer;font-family:'Outfit',sans-serif;font-size:.78rem;padding:0;">Click here to change location</button>
+                      <?php else: ?>
+                        Click anywhere on the map to drop your shop pin
+                      <?php endif; ?>
+                    </div>
                   <div class="map-coords-row">
                     <div class="form-group">
                       <label style="font-size:.75rem;">Latitude</label>
@@ -821,7 +829,50 @@ document.getElementById('mapSearchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); searchMapAddress(); }
 });
 
+let mapIsLocked = <?php echo ($savedLat && $savedLng) ? 'true' : 'false'; ?>;
+
+function lockMap() {
+  mapIsLocked = true;
+  pickerMap.dragging.disable();
+  pickerMap.touchZoom.disable();
+  pickerMap.doubleClickZoom.disable();
+  pickerMap.scrollWheelZoom.disable();
+  pickerMap.boxZoom.disable();
+  pickerMap.keyboard.disable();
+  if (pickerMap.tap) pickerMap.tap.disable();
+  document.getElementById('shopMapPicker').style.cursor = 'not-allowed';
+  document.getElementById('shopMapPicker').style.opacity = '0.85';
+}
+
+function unlockMap() {
+  mapIsLocked = false;
+  pickerMap.dragging.enable();
+  pickerMap.touchZoom.enable();
+  pickerMap.doubleClickZoom.enable();
+  pickerMap.scrollWheelZoom.enable();
+  pickerMap.boxZoom.enable();
+  pickerMap.keyboard.enable();
+  if (pickerMap.tap) pickerMap.tap.enable();
+  document.getElementById('shopMapPicker').style.cursor = '';
+  document.getElementById('shopMapPicker').style.opacity = '1';
+  document.getElementById('mapPickerHint').textContent = 'Click anywhere on the map to drop your shop pin';
+
+  const searchInput = document.getElementById('mapSearchInput');
+  const searchBtn   = document.getElementById('mapSearchBtn');
+  searchInput.disabled = false;
+  searchBtn.disabled   = false;
+}
+
+if (mapIsLocked) lockMap();
+
+const unlockBtn = document.getElementById('unlockMapBtn');
+if (unlockBtn) {
+  unlockBtn.addEventListener('click', unlockMap);
+}
+
 pickerMap.on('click', function(e) {
+  if (mapIsLocked) return;
+
   const { lat, lng } = e.latlng;
   document.getElementById('latInput').value = lat.toFixed(7);
   document.getElementById('lngInput').value = lng.toFixed(7);

@@ -228,6 +228,23 @@ $_SESSION['last_activity'] = time();
         .modal-status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .modal-section-title { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; color: #94a3b8; margin-bottom: 8px; margin-top: 1rem; }
         .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+                /* ── BOOKING STATUS STEPPER ── */
+        .booking-stepper { display:flex; align-items:flex-start; margin-bottom:1.1rem; }
+        .stepper-step { display:flex; flex-direction:column; align-items:center; flex:1; position:relative; }
+        .stepper-circle {
+          width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+          font-size:.75rem; font-weight:800; border:2px solid #e2e8f0; background:white; color:#94a3b8;
+          z-index:2; font-family:"Outfit",sans-serif; transition:all .2s ease;
+        }
+        .stepper-circle.done    { background:#10b981; border-color:#10b981; color:white; }
+        .stepper-circle.current { background:#f59e0b; border-color:#f59e0b; color:white; box-shadow:0 0 0 4px rgba(245,158,11,.18); }
+        .stepper-circle.cancel  { background:#ef4444; border-color:#ef4444; color:white; }
+        .stepper-label { font-size:.66rem; font-weight:700; color:#64748b; margin-top:5px; text-align:center; }
+        .stepper-line {
+          position:absolute; top:14px; left:50%; width:100%; height:2px; background:#e2e8f0; z-index:1;
+        }
+        .stepper-line.done { background:#10b981; }
+        .stepper-step:last-child .stepper-line { display:none; }
         .detail-item { background: #f8fafc; border-radius: 10px; padding: 9px 12px; }
         .detail-item-label { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #94a3b8; margin-bottom: 3px; }
         .detail-item-value { font-size: .85rem; font-weight: 600; color: #0f172a; }
@@ -525,6 +542,7 @@ body.sidebar-open .sidebar-backdrop {
         <div class="modal-box">
           <div class="modal-banner" id="modalBanner"></div>
           <div class="modal-body">
+            <div id="modalStepper"></div>
             <div class="modal-status-row">
               <span id="modalStatusBadge" class="status-badge"></span>
               <span id="modalBookingId" style="font-size:.72rem;color:#94a3b8;"></span>
@@ -881,6 +899,41 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
           no_show:'linear-gradient(135deg,#8b5cf6,#7c3aed)'
         };
 
+                function renderStepper(status) {
+          if (status === 'cancelled' || status === 'no_show') {
+            const label = status === 'cancelled' ? 'Cancelled' : 'No Show';
+            return `
+              <div class="booking-stepper">
+                <div class="stepper-step">
+                  <div class="stepper-circle done">✓</div>
+                  <div class="stepper-line done"></div>
+                  <div class="stepper-label">Pending</div>
+                </div>
+                <div class="stepper-step">
+                  <div class="stepper-circle cancel">✕</div>
+                  <div class="stepper-label" style="color:#ef4444;">${label}</div>
+                </div>
+              </div>`;
+          }
+
+          const order = ['pending', 'confirmed', 'completed'];
+          const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed' };
+          const currentIdx = order.indexOf(status);
+
+          return `<div class="booking-stepper">` + order.map((key, idx) => {
+            let circleClass = '', content = idx + 1;
+            if (idx < currentIdx)      { circleClass = 'done';    content = '✓'; }
+            else if (idx === currentIdx) { circleClass = 'current'; }
+            const lineClass = idx < currentIdx ? 'done' : '';
+            return `
+              <div class="stepper-step">
+                <div class="stepper-circle ${circleClass}">${content}</div>
+                <div class="stepper-line ${lineClass}"></div>
+                <div class="stepper-label">${labels[key]}</div>
+              </div>`;
+          }).join('') + `</div>`;
+        }
+
         function openDetail(b) {
           const shopLogo = b.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(b.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
           document.getElementById('modalBanner').style.background = STATUS_BG[b.status] || '#f59e0b';
@@ -891,6 +944,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
               <div class="modal-shop-name">${esc(b.shop_name || 'Repair Shop')}</div>
               <div class="modal-booking-id">Booking #${b.id}</div>
             </div>`;
+          document.getElementById('modalStepper').innerHTML = renderStepper(b.status);
           document.getElementById('modalStatusBadge').className = `status-badge status-${b.status}`;
           document.getElementById('modalStatusBadge').textContent = b.status.charAt(0).toUpperCase() + b.status.slice(1);
           document.getElementById('modalBookingId').textContent = `Submitted: ${fmtDatetime(b.created_at)}`;

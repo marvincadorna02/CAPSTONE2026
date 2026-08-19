@@ -203,6 +203,23 @@ $conn->close();
     .modal-title { font-size:17px; font-weight:800; color:#0f172a; margin-bottom:1rem; font-family:"Outfit",sans-serif; }
     .modal-close { float:right; background:none; border:none; font-size:1.2rem; color:#94a3b8; cursor:pointer; padding:0; margin-top:-2px; }
     .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:1rem; }
+        /* ── BOOKING STATUS STEPPER ── */
+    .booking-stepper { display:flex; align-items:flex-start; margin-bottom:1.1rem; }
+    .stepper-step { display:flex; flex-direction:column; align-items:center; flex:1; position:relative; }
+    .stepper-circle {
+      width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:.75rem; font-weight:800; border:2px solid #e2e8f0; background:white; color:#94a3b8;
+      z-index:2; font-family:"Outfit",sans-serif; transition:all .2s ease;
+    }
+    .stepper-circle.done    { background:#10b981; border-color:#10b981; color:white; }
+    .stepper-circle.current { background:#f59e0b; border-color:#f59e0b; color:white; box-shadow:0 0 0 4px rgba(245,158,11,.18); }
+    .stepper-circle.cancel  { background:#ef4444; border-color:#ef4444; color:white; }
+    .stepper-label { font-size:.66rem; font-weight:700; color:#64748b; margin-top:5px; text-align:center; }
+    .stepper-line {
+      position:absolute; top:14px; left:50%; width:100%; height:2px; background:#e2e8f0; z-index:1;
+    }
+    .stepper-line.done { background:#10b981; }
+    .stepper-step:last-child .stepper-line { display:none; }
     .detail-item { background:#f8fafc; border-radius:10px; padding:10px 12px; }
     .detail-item-label { font-size:.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:#94a3b8; margin-bottom:3px; }
     .detail-item-value { font-size:.85rem; font-weight:600; color:#0f172a; }
@@ -347,13 +364,14 @@ body.sidebar-open .sidebar-backdrop {
   </div>
 </div>
 
-  <!-- Booking Detail Modal -->
+   <!-- Booking Detail Modal -->
   <div class="modal-overlay" id="detailModal">
     <div class="modal-box">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
         <div class="modal-title" style="margin:0;">Booking Details</div>
         <button class="modal-close" onclick="closeDetailModal()">✕</button>
       </div>
+      <div id="detailStepper"></div>
       <div class="detail-grid" id="detailGrid"></div>
       <div class="problem-block" id="detailProblem"></div>
       <div class="modal-actions-row" id="detailActions"></div>
@@ -558,10 +576,47 @@ body.sidebar-open .sidebar-backdrop {
       }
     }
 
+    function renderStepper(status) {
+      if (status === 'cancelled' || status === 'no_show') {
+        const label = status === 'cancelled' ? 'Cancelled' : 'No Show';
+        return `
+          <div class="booking-stepper">
+            <div class="stepper-step">
+              <div class="stepper-circle done">✓</div>
+              <div class="stepper-line done"></div>
+              <div class="stepper-label">Pending</div>
+            </div>
+            <div class="stepper-step">
+              <div class="stepper-circle cancel">✕</div>
+              <div class="stepper-label" style="color:#ef4444;">${label}</div>
+            </div>
+          </div>`;
+      }
+
+      const order = ['pending', 'confirmed', 'completed'];
+      const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed' };
+      const currentIdx = order.indexOf(status);
+
+      return `<div class="booking-stepper">` + order.map((key, idx) => {
+        let circleClass = '', content = idx + 1;
+        if (idx < currentIdx)      { circleClass = 'done';    content = '✓'; }
+        else if (idx === currentIdx) { circleClass = 'current'; }
+        const lineClass = idx < currentIdx ? 'done' : '';
+        return `
+          <div class="stepper-step">
+            <div class="stepper-circle ${circleClass}">${content}</div>
+            <div class="stepper-line ${lineClass}"></div>
+            <div class="stepper-label">${labels[key]}</div>
+          </div>`;
+      }).join('') + `</div>`;
+    }
+
     // ── View detail modal ────────────────────────────────────
-    function viewDetail(b) {
+      function viewDetail(b) {
       const statusColors = { pending:'#92400e', confirmed:'#065f46', completed:'#1e40af', cancelled:'#991b1b' };
       const statusBg     = { pending:'#fef3c7', confirmed:'#d1fae5', completed:'#dbeafe', cancelled:'#fee2e2' };
+
+      document.getElementById('detailStepper').innerHTML = renderStepper(b.status);
 
       document.getElementById('detailGrid').innerHTML = `
         <div class="detail-item"><div class="detail-item-label">Customer</div><div class="detail-item-value">${esc(b.customer_name)}</div></div>
