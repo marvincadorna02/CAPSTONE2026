@@ -382,7 +382,7 @@ list.innerHTML = data.notifications.map(n => {
   const dest     = n.type === 'review' ? 'shop-reviews.php' : n.type === 'subscription' ? 'shop-subscription.php' : 'shop-bookings.php';
   const avatarBg = AVATAR_BG[n.status] || '94a3b8';
   const displayName = n.type === 'subscription' ? 'Subscription' : (n.customer_name || 'Customer');
-   const avatarUrl = n.customer_picture 
+  const avatarUrl = n.customer_picture 
   ? n.customer_picture 
   : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=${avatarBg}&color=fff&size=80`;
 

@@ -73,6 +73,26 @@ if ($serviceId) {
     $serviceName = $sRow['service_name'] ?? '';
 }
 
+// ── Prevent double-booking: check if this slot is already taken ──
+$conflictCheck = $conn->prepare("
+    SELECT id FROM bookings
+    WHERE shop_id = ?
+      AND booking_date = ?
+      AND booking_time = ?
+      AND status IN ('pending','confirmed')
+    LIMIT 1
+");
+$conflictCheck->bind_param("iss", $shopId, $bookingDate, $bookingTime);
+$conflictCheck->execute();
+$conflict = $conflictCheck->get_result()->fetch_assoc();
+$conflictCheck->close();
+
+if ($conflict) {
+    $conn->close();
+    echo json_encode(['error' => 'This time slot has just been booked by another customer. Please choose a different date or time.']);
+    exit();
+}
+
 // ── Insert booking ───────────────────────────────────────────
 $stmt = $conn->prepare("
     INSERT INTO bookings

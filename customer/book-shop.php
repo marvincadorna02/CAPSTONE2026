@@ -60,7 +60,20 @@ $logoUrl = !empty($shop['logo_url'])
     ? $baseUrl . $shop['logo_url']
     : "https://ui-avatars.com/api/?name=".urlencode($shop['name'])."&background=f59e0b&color=fff&size=128";
 
+// ── Fetch customer's actual profile picture (falls back to initials avatar) ──
 $avatarUrl = "https://ui-avatars.com/api/?name=".urlencode($userName)."&background=2563eb&color=fff";
+$connAvatar = new mysqli("localhost", "root", "", "fixitdavao");
+if (!$connAvatar->connect_error) {
+    $avStmt = $connAvatar->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $avStmt->bind_param("i", $userId);
+    $avStmt->execute();
+    $avRow = $avStmt->get_result()->fetch_assoc();
+    $avStmt->close();
+    $connAvatar->close();
+    if (!empty($avRow['profile_picture'])) {
+        $avatarUrl = $avRow['profile_picture'];
+    }
+}
 
 // Open days for JS
 $openDays = array_keys($hours);
@@ -207,6 +220,8 @@ $servicesJson = json_encode($services);
     .date-hint { font-size:0.75rem; color:#94a3b8; margin-top:4px; }
     .date-hint.warn { color:#f59e0b; }
     .date-hint.ok   { color:#10b981; }
+    .date-hint.checking { color:#94a3b8; }
+    .date-hint.taken { color:#ef4444; font-weight:600; }
 
     /* Summary box before submit */
     .booking-summary-box {
@@ -733,7 +748,53 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
       updateSummary();
     });
 
-    document.getElementById('bookingTime').addEventListener('change', updateSummary);
+        document.getElementById('bookingTime').addEventListener('change', function() {
+      updateSummary();
+      checkSlotAvailability();
+    });
+    dateInput.addEventListener('change', checkSlotAvailability);
+
+    // ── Check slot availability (prevents double-booking) ────
+    let slotAvailable = true;
+    let availCheckToken = 0;
+
+    async function checkSlotAvailability() {
+      const dateVal = dateInput.value;
+      const timeVal = document.getElementById('bookingTime').value;
+      const hint    = dateHint;
+
+      if (!dateVal || !timeVal) return;
+
+      const myToken = ++availCheckToken;
+      hint.textContent = 'Checking availability...';
+      hint.className = 'date-hint checking';
+      slotAvailable = false;
+      document.getElementById('submitBtn').disabled = true;
+
+      try {
+        const res = await fetch(`check-availability.php?shop_id=<?php echo $shopId; ?>&booking_date=${dateVal}&booking_time=${timeVal}`);
+        const data = await res.json();
+
+        if (myToken !== availCheckToken) return; // stale response, ignore
+
+        if (data.success && data.available) {
+          slotAvailable = true;
+          hint.textContent = '✓ This time slot is available.';
+          hint.className = 'date-hint ok';
+          document.getElementById('submitBtn').disabled = false;
+        } else {
+          slotAvailable = false;
+          hint.textContent = '⚠️ This time slot is already booked. Please choose another time.';
+          hint.className = 'date-hint taken';
+          document.getElementById('submitBtn').disabled = true;
+        }
+      } catch (err) {
+        if (myToken !== availCheckToken) return;
+        // If check fails, allow submit — server-side check will still catch conflicts
+        slotAvailable = true;
+        document.getElementById('submitBtn').disabled = false;
+      }
+    }
 
     // ── Format time helper ───────────────────────────────────
     function formatTime(t) {
@@ -805,6 +866,13 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
           dateInput.scrollIntoView({ behavior:'smooth', block:'center' });
           return;
         }
+      }
+
+                    if (!slotAvailable) {
+        dateHint.textContent = '⚠️ This time slot is already booked. Please choose another time.';
+        dateHint.className = 'date-hint taken';
+        dateInput.scrollIntoView({ behavior:'smooth', block:'center' });
+        return;
       }
 
       const btn = document.getElementById('submitBtn');

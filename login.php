@@ -263,6 +263,11 @@ $conn->close();
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+  if (window.top !== window.self) {
+    document.documentElement.classList.add('in-modal');
+  }
+</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Fix It Davao - Login</title>
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
@@ -270,6 +275,22 @@ $conn->close();
     <link rel="shortcut icon" href="assets/images/logo.png" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+            html.in-modal, html.in-modal body{
+        background:transparent !important;
+        overflow:visible !important;
+      }
+      html.in-modal .bg-grid,
+      html.in-modal .bg-glow,
+      html.in-modal .bg-glow2{
+        display:none !important;
+      }
+          html.in-modal .auth-wrap{
+      height:100% !important;
+      padding:20px !important;
+    }
+      html.in-modal .auth-card{
+        animation:none !important;
+      }
       *{margin:0;padding:0;box-sizing:border-box;}
       :root{
         --primary:#0f172a;

@@ -34,7 +34,7 @@ if (!in_array($imageInfo['mime'], $allowedMimes, true)) {
     echo json_encode(['success'=>false,'error'=>'Unsupported image type']); exit();
 }
 
-// ── Same connection as your other files ──
+// ── Same connection as your other files ──    
 $conn = new mysqli("localhost", "root", "", "fixitdavao");
 if ($conn->connect_error) {
     echo json_encode(['success'=>false,'error'=>'DB connection failed']); exit();

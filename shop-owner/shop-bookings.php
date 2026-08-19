@@ -60,7 +60,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS bookings (
 // ── Fetch bookings for this shop ─────────────────────────────
 $bookings = [];
 $bResult = $conn->prepare("
-    SELECT b.*, u.name AS customer_user_name, u.email AS customer_email
+    SELECT b.*, u.name AS customer_user_name, u.email AS customer_email, u.profile_picture AS customer_picture
     FROM bookings b
     LEFT JOIN users u ON u.id = b.customer_id
     WHERE b.shop_id = ?
@@ -419,7 +419,9 @@ body.sidebar-open .sidebar-backdrop {
         <?php foreach ($bookings as $b):
           $statusClass = 'status-' . $b['status'];
           $statusLabel = ucfirst($b['status']);
-          $custAvatar  = "https://ui-avatars.com/api/?name=".urlencode($b['customer_name'])."&background=2563eb&color=fff&size=80";
+          $custAvatar  = !empty($b['customer_picture'])
+    ? $b['customer_picture']
+    : "https://ui-avatars.com/api/?name=".urlencode($b['customer_name'])."&background=2563eb&color=fff&size=80";
           $dateFormatted = date('M d, Y', strtotime($b['booking_date']));
           $timeFormatted = date('g:i A', strtotime($b['booking_time']));
           $createdFormatted = date('M d, Y g:i A', strtotime($b['created_at']));
