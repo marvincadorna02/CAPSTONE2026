@@ -464,7 +464,7 @@ $conn->close();
 
         <div class="auth-card">
           <h1>Welcome Back</h1>
-          <p class="subtext">Sign in to book, manage, or track your repairs.</p>
+          <p class="subtext" id="loginSubtext">Sign in to book, manage, or track your repairs.</p>
 
           <form id="loginForm" method="POST" action="login.php">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
@@ -706,6 +706,13 @@ $conn->close();
         const usernameInput  = document.getElementById("usernameInput");
         const accessCodeInput = document.getElementById("accessCodeInput");
 
+        const loginSubtext = document.getElementById("loginSubtext");
+        const SUBTEXT_BY_ROLE = {
+          customer:   "Sign in to book, manage, or track your repairs.",
+          repairshop: "Sign in to manage bookings and grow your repair shop.",
+          admin:      "Only authorize person can access here."
+        };
+
         function updateFieldsByRole(role) {
           if (role === "admin") {
             emailGroup.style.display = "none"; usernameGroup.style.display = "block"; accessCodeGroup.style.display = "block";
@@ -718,6 +725,8 @@ $conn->close();
           usernameInput.classList.remove("input-error");
           accessCodeInput.classList.remove("input-error");
           document.getElementById("password").classList.remove("input-error");
+
+          loginSubtext.textContent = SUBTEXT_BY_ROLE[role] || SUBTEXT_BY_ROLE.customer;
         }
 
       radios.forEach(r => r.addEventListener("change", function () { updateFieldsByRole(this.value); }));

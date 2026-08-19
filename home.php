@@ -761,7 +761,7 @@ html{
     </div>
   </div>
   <div class="footer-bottom">
-    <span class="footer-copy">© 2025 Fix It Davao. All rights reserved.</span>
+    <span class="footer-copy">© 2026 Fix It Davao. All rights reserved.</span>
   </div>
 </footer>
 
