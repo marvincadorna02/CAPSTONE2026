@@ -1,11 +1,19 @@
 <?php
 session_start();
 
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
+    $_SESSION = [];
     session_destroy();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+    }
     header("Location: ../login.php?timeout=1");
     exit();
 }
@@ -13,6 +21,7 @@ $_SESSION['last_activity'] = time();
 
 if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
 if ($_SESSION['role'] === 'admin') { header("Location: ../admin/admin-dashboard.php"); exit(); }
+if ($_SESSION['role'] === 'repairshop') { header("Location: shop-information.php"); exit(); }
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
