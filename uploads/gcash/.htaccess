@@ -1,0 +1,12 @@
+# Defense-in-depth: this folder should only ever hold images.
+
+# Even if a bad file somehow lands here, the server must never execute it.
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phar|pl|py|jsp|asp|aspx|sh|cgi)$">
+    Require all denied
+</FilesMatch>
+Options -ExecCGI
+AddType text/plain .php .phtml .php3 .php4 .php5 .php7 .phar

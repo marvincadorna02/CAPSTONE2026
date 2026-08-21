@@ -1,4 +1,4 @@
-    <?php
+<?php
     session_start();
 
     // ── Session timeout (30 mins) ──
@@ -84,58 +84,94 @@
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
         $screenshotPath = '';
-        if (!empty($_FILES['gcash_screenshot']['name'])) {
-            $ext      = pathinfo($_FILES['gcash_screenshot']['name'], PATHINFO_EXTENSION);
-            $filename = 'gcash_' . $userId . '_' . time() . '.' . $ext;
-            $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    $finfo = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $_FILES['gcash_screenshot']['tmp_name']);
+        $uploadOk       = true; // stays true if no file was sent at all
 
-    if (!in_array($mimeType, $allowedTypes)) {
-        $msg = 'Invalid file type. Only JPG, PNG allowed.';
-        $msgType = 'error';
-    } elseif ($_FILES['gcash_screenshot']['size'] > 5 * 1024 * 1024) {
-        $msg = 'File too large. Max 5MB.';
-        $msgType = 'error';
-    } else {
-        // proceed sa move_uploaded_file
-    }
-            if (move_uploaded_file($_FILES['gcash_screenshot']['tmp_name'], $uploadDir . $filename)) {
-                $screenshotPath = $uploadDir . $filename;
+        if (!empty($_FILES['gcash_screenshot']['name'])) {
+
+            // ── Validate BEFORE touching the filesystem ──
+            // Never trust the client-sent filename/extension — detect the
+            // real MIME type from the file bytes and derive the extension
+            // from THAT, so a renamed .php can't sneak in as "photo.jpg".
+            $allowedTypes = [
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/webp' => 'webp',
+            ];
+
+            if ($_FILES['gcash_screenshot']['error'] !== UPLOAD_ERR_OK) {
+                $msg = 'Upload failed. Please try again.';
+                $msgType = 'error';
+                $uploadOk = false;
+            } elseif ($_FILES['gcash_screenshot']['size'] > 5 * 1024 * 1024) {
+                $msg = 'File too large. Max 5MB.';
+                $msgType = 'error';
+                $uploadOk = false;
+            } else {
+                $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $_FILES['gcash_screenshot']['tmp_name']);
+                finfo_close($finfo);
+
+                // Double-check it's really a readable image (belt and suspenders,
+                // same approach used in api/update_profile_picture.php)
+                $imageInfo = @getimagesize($_FILES['gcash_screenshot']['tmp_name']);
+
+                if (!isset($allowedTypes[$mimeType]) || $imageInfo === false) {
+                    $msg = 'Invalid file type. Only JPG, PNG, or WEBP allowed.';
+                    $msgType = 'error';
+                    $uploadOk = false;
+                }
+            }
+
+            if ($uploadOk) {
+                $ext      = $allowedTypes[$mimeType];
+                $filename = 'gcash_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+                if (move_uploaded_file($_FILES['gcash_screenshot']['tmp_name'], $uploadDir . $filename)) {
+                    $screenshotPath = $uploadDir . $filename;
+                } else {
+                    $msg = 'Failed to save uploaded file. Please try again.';
+                    $msgType = 'error';
+                    $uploadOk = false;
+                }
             }
         }
 
-        // Cancel any previous pending
-        $cancelStmt = $conn->prepare("UPDATE shop_subscriptions SET status='rejected' WHERE shop_id=? AND status='pending'");
-        $cancelStmt->bind_param("i", $userId);
-        $cancelStmt->execute();
-        $cancelStmt->close();
+        // Only insert the subscription request if the upload (when present)
+        // actually passed validation — a rejected file must never silently
+        // let the request through with a blank/garbage screenshot path.
+        if ($uploadOk) {
+            // Cancel any previous pending
+            $cancelStmt = $conn->prepare("UPDATE shop_subscriptions SET status='rejected' WHERE shop_id=? AND status='pending'");
+            $cancelStmt->bind_param("i", $userId);
+            $cancelStmt->execute();
+            $cancelStmt->close();
 
-        $stmt = $conn->prepare("
-          INSERT INTO shop_subscriptions (shop_id, plan_id, status, payment_ref, gcash_screenshot, gcash_number, payment_method, bank_name)
-          VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
-      ");
-      $stmt->bind_param("iisssss", $userId, $planId, $payRef, $screenshotPath, $gcashNum, $paymentMethod, $bankName);
-        if ($stmt->execute()) {
-            $msg     = 'Subscription request submitted! Wait for admin approval.';
-            $msgType = 'success';
-            // Reload current sub
-            $stmt2 = $conn->prepare("
-                SELECT ss.*, sp.name AS plan_name, sp.price, sp.duration_days
-                FROM shop_subscriptions ss
-                JOIN subscription_plans sp ON ss.plan_id = sp.id
-                WHERE ss.shop_id = ?
-                ORDER BY ss.created_at DESC LIMIT 1
-            ");
-            $stmt2->bind_param("i", $userId);
-            $stmt2->execute();
-            $currentSub = $stmt2->get_result()->fetch_assoc();
-            $stmt2->close();
-        } else {
-            $msg     = 'Something went wrong. Please try again.';
-            $msgType = 'error';
+            $stmt = $conn->prepare("
+              INSERT INTO shop_subscriptions (shop_id, plan_id, status, payment_ref, gcash_screenshot, gcash_number, payment_method, bank_name)
+              VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
+          ");
+          $stmt->bind_param("iisssss", $userId, $planId, $payRef, $screenshotPath, $gcashNum, $paymentMethod, $bankName);
+            if ($stmt->execute()) {
+                $msg     = 'Subscription request submitted! Wait for admin approval.';
+                $msgType = 'success';
+                // Reload current sub
+                $stmt2 = $conn->prepare("
+                    SELECT ss.*, sp.name AS plan_name, sp.price, sp.duration_days
+                    FROM shop_subscriptions ss
+                    JOIN subscription_plans sp ON ss.plan_id = sp.id
+                    WHERE ss.shop_id = ?
+                    ORDER BY ss.created_at DESC LIMIT 1
+                ");
+                $stmt2->bind_param("i", $userId);
+                $stmt2->execute();
+                $currentSub = $stmt2->get_result()->fetch_assoc();
+                $stmt2->close();
+            } else {
+                $msg     = 'Something went wrong. Please try again.';
+                $msgType = 'error';
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 
     $conn->close();

@@ -53,7 +53,15 @@ $logoUrl = null;
 // ── Handle logo upload ───────────────────────────────────────
 if (!empty($_FILES['shop_logo']['name'])) {
     $file    = $_FILES['shop_logo'];
-    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    // Map MIME -> extension: never trust the client-sent filename/extension.
+    // The extension we actually save with is derived from the detected type
+    // below, so a mislabeled "photo.php" can't slip through as executable.
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/png'  => 'png',
+        'image/gif'  => 'gif',
+        'image/webp' => 'webp',
+    ];
     $maxSize = 5 * 1024 * 1024; // 5MB
 
     if ($file['size'] > $maxSize) {
@@ -64,7 +72,7 @@ if (!empty($_FILES['shop_logo']['name'])) {
     $mimeType = finfo_file($finfo, $file['tmp_name']);
     finfo_close($finfo);
 
-    if (!in_array($mimeType, $allowed)) {
+    if (!isset($allowed[$mimeType]) || @getimagesize($file['tmp_name']) === false) {
         die("Invalid file type. Only JPG, PNG, GIF, WEBP allowed.");
     }
 
@@ -83,8 +91,8 @@ if (!empty($_FILES['shop_logo']['name'])) {
         }
     }
 
-    $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $filename = 'shop_' . $userId . '_' . time() . '.' . $ext;
+    $ext      = $allowed[$mimeType];
+    $filename = 'shop_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
 
     if (!move_uploaded_file($file['tmp_name'], $uploadDir . $filename)) {
         die("Failed to save logo.");

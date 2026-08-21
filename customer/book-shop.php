@@ -412,6 +412,17 @@ $servicesJson = json_encode($services);
     z-index:600 !important;
   }
 }
+
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex !important;
+    z-index: 1200 !important;
+  }
+  .sidebar {
+    z-index: 1100 !important;
+  }
+}
+
   </style>
 </head>
 <body class="role-customer">

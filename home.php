@@ -364,11 +364,7 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .auth-modal-overlay.visible .auth-modal-box{transform:translateY(0);}
 .auth-modal-box iframe{width:100%;height:640px;max-height:90vh;border:none;display:block;background:transparent;}
 .auth-modal-close{
-  position:absolute;top:6px;right:6px;z-index:10;
-  width:30px;height:30px;border-radius:8px;border:none;
-  background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:16px;line-height:1;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  transition:all 0.2s;
+  display:none;
 }
 .auth-modal-close:hover{background:rgba(255,255,255,0.15);color:#fff;}
 @media(max-width:480px){
@@ -904,16 +900,12 @@ authClose.addEventListener('click', closeAuthModal);
 authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) closeAuthModal(); });
 
 // ── Switch between login/signup/forgot-password inside modal ──
-window.addEventListener('message', (e) => {
-  console.log('Received message:', e.data); // temporary debug
-  if (e.data === 'switch-to-forgot') {
-    authFrame.src = 'forgot-password.php';
-  }
-  if (e.data === 'switch-to-login') {
-    authFrame.src = 'login.php';
-  }
-});
-</script>
+      window.addEventListener('message', (e) => {
+        if (e.data === 'switch-to-forgot') authFrame.src = 'forgot-password.php';
+        if (e.data === 'switch-to-login') authFrame.src = 'login.php';
+        if (e.data === 'close-modal') closeAuthModal();   // ← bag-o
+      });
+  </script>
 <script>
   window.addEventListener('load', function () {
     const loader = document.getElementById('pageLoader');

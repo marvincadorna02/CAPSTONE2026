@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/config/env.php';
 
 // ── CSRF Token generation ─────────────────────────────────────
 if (empty($_SESSION['csrf_token'])) {
@@ -31,8 +32,15 @@ if ($conn->connect_error) {
 
 // ── Brute Force Protection ────────────────────────────────────
 define('MAX_ATTEMPTS',    5);
-define('LOCKOUT_MINUTES', 1);
-define('ADMIN_ACCESS_CODE', 'FIXITDAVAO2026');
+define('LOCKOUT_MINUTES', 15);
+
+// ── Admin credentials ───────────────────────────────────────────
+// Pulled from .env instead of being hardcoded in source. See
+// config/env.php for the loader. Never commit real values to .env —
+// it's already in .gitignore.
+define('ADMIN_ACCESS_CODE',   $_ENV['ADMIN_ACCESS_CODE']   ?? '');
+define('ADMIN_USERNAME',      $_ENV['ADMIN_USERNAME']      ?? '');
+define('ADMIN_PASSWORD_HASH', $_ENV['ADMIN_PASSWORD_HASH'] ?? '');
 
 function getLoginAttempts($conn, $email, $ip, $loginType) {
     $window = date('Y-m-d H:i:s', strtotime('-' . LOCKOUT_MINUTES . ' minutes'));
@@ -125,15 +133,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($error)) {
         // ── Admin login ───────────────────────────────────────
-               if ($role === 'admin') {
+        if ($role === 'admin') {
+            // Refuse to even attempt admin login if the .env secrets aren't
+            // configured — otherwise an empty ADMIN_ACCESS_CODE/USERNAME/HASH
+            // could match an empty submitted value via hash_equals('','').
+            if (ADMIN_ACCESS_CODE === '' || ADMIN_USERNAME === '' || ADMIN_PASSWORD_HASH === '') {
+                $errorTitle = "Admin Login Unavailable";
+                $error      = "Admin credentials are not configured on this server.";
+                $errorType  = "general";
+            } else {
             $accessCode = trim($_POST['accessCode'] ?? '');
 
-            if ($accessCode !== ADMIN_ACCESS_CODE) {
+            if (!hash_equals(ADMIN_ACCESS_CODE, $accessCode)) {
                 $errorTitle = "Access Denied!";
                 $error      = "Invalid admin access code.";
                 $errorType  = "general";
                 recordLoginAttempt($conn, 'admin@admin', $userIp, $loginType);
-            } elseif ($username === 'admin' && $password === 'admin123') {
+            } elseif (hash_equals(ADMIN_USERNAME, $username) && password_verify($password, ADMIN_PASSWORD_HASH)) {
                 session_regenerate_id(true);
                 clearLoginAttempts($conn, 'admin@admin', $userIp, $loginType);
                 $_SESSION['user_id'] = 0;
@@ -148,6 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errorType  = "general";
                 recordLoginAttempt($conn, 'admin@admin', $userIp, $loginType);
             }
+            } // end .env-configured check
 
         // ── Customer / Repair Shop login ──────────────────────
         } else {
@@ -463,8 +480,19 @@ $conn->close();
   <div style="width:100%;max-width:440px;">
 
         <div class="auth-card">
-          <h1>Welcome Back</h1>
-          <p class="subtext" id="loginSubtext">Sign in to book, manage, or track your repairs.</p>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+  <div>
+              <h1>Welcome Back</h1>
+              <p class="subtext" id="loginSubtext">Sign in to book, manage, or track your repairs.</p>
+            </div>
+                  <button type="button" onclick="parent.postMessage('close-modal','*')"
+        onmouseover="this.style.background='rgba(245,158,11,0.15)';this.style.color='#f59e0b'"
+        onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.6)'"
+        style="flex-shrink:0;width:30px;height:30px;border-radius:8px;border:none;
+        background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:16px;
+        line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
+        transition:all 0.2s;">&times;</button>
+          </div>
 
           <form id="loginForm" method="POST" action="login.php">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
