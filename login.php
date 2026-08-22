@@ -484,19 +484,10 @@ $conn->close();
   <div style="width:100%;max-width:440px;">
 
         <div class="auth-card">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-  <div>
+          <div>
               <h1>Welcome Back</h1>
               <p class="subtext" id="loginSubtext">Sign in to book, manage, or track your repairs.</p>
             </div>
-                  <button type="button" onclick="parent.postMessage('close-modal','*')"
-        onmouseover="this.style.background='rgba(245,158,11,0.15)';this.style.color='#f59e0b'"
-        onmouseout="this.style.background='rgba(255,255,255,0.08)';this.style.color='rgba(255,255,255,0.6)'"
-        style="flex-shrink:0;width:30px;height:30px;border-radius:8px;border:none;
-        background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);font-size:16px;
-        line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;
-        transition:all 0.2s;">&times;</button>
-          </div>
 
           <form id="loginForm" method="POST" action="login.php">
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />

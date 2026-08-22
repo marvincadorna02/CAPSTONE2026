@@ -1,4 +1,3 @@
-
 <?php
 session_start();
 
@@ -364,11 +363,18 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .auth-modal-overlay.visible .auth-modal-box{transform:translateY(0);}
 .auth-modal-box iframe{width:100%;height:640px;max-height:90vh;border:none;display:block;background:transparent;}
 .auth-modal-close{
-  display:none;
+  position:absolute;top:-14px;right:-14px;z-index:5;
+  width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);
+  background:rgba(15,23,42,0.95);color:rgba(255,255,255,0.7);
+  font-size:18px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s ease;
+  box-shadow:0 6px 18px rgba(0,0,0,0.3);
 }
-.auth-modal-close:hover{background:rgba(255,255,255,0.15);color:#fff;}
+.auth-modal-close:hover{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;}
 @media(max-width:480px){
   .auth-modal-box iframe{height:100vh;max-height:100vh;}
+  .auth-modal-close{top:8px;right:8px;}
 }
 
 html{
