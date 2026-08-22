@@ -38,7 +38,9 @@
     // Build absolute logo URL (same pattern as shop-information.php)
     $savedLogoUrl = $row['logo_url'] ?? '';
     if ($savedLogoUrl) {
-        $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+        $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+        $baseUrl = ($isHttps ? 'https' : 'http')
                 . '://' . $_SERVER['HTTP_HOST']
                 . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
         $savedLogoUrl = $baseUrl . $savedLogoUrl;

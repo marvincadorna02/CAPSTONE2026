@@ -32,10 +32,24 @@ $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
 
+// ── Fetch profile picture from DB (not localStorage — that's per-device
+// only, so a pic set on one phone/PC won't show up on another) ──
+$userProfilePic = null;
+$conn = new mysqli("localhost", "root", "", "fixitdavao");
+if (!$conn->connect_error) {
+    $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $userProfilePic = $row['profile_picture'] ?? null;
+    $stmt->close();
+    $conn->close();
+}
+
 $roleLabel = $userRole === 'repairshop' ? 'Repair Shop' : 'Customer';
 $pageTitle = $userRole === 'repairshop' ? 'My Repair Shop' : 'Find Repair Shops';
 $avatarBg  = $userRole === 'repairshop' ? 'f59e0b' : '2563eb';
-$avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($userName) . "&background={$avatarBg}&color=fff";
+$avatarUrl = $userProfilePic ?: ("https://ui-avatars.com/api/?name=" . urlencode($userName) . "&background={$avatarBg}&color=fff");
 $bodyClass = "role-{$userRole}";
 ?>
 <!doctype html>
@@ -1520,7 +1534,9 @@ document.addEventListener('click', (e) => {
   });
   
 function openProfileModal() {
-  const saved = localStorage.getItem('profilePic_<?php echo $userId; ?>');
+  // Server-side value (DB) takes priority — falls back to localStorage cache only.
+  const serverPic = <?php echo json_encode($userProfilePic); ?>;
+  const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
   const avatarEl = document.getElementById('profileInitials');
   if (saved) {
     avatarEl.innerHTML = `<img src="${saved}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" />`;
@@ -1572,9 +1588,10 @@ function showPicStatus(msg, ok) {
   if (ok !== null) setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 
-// Auto-load saved pic sa top-bar avatar
+// Auto-load saved pic sa top-bar avatar — DB (server) value takes priority
 (function() {
-  const saved = localStorage.getItem('profilePic_<?php echo $userId; ?>');
+  const serverPic = <?php echo json_encode($userProfilePic); ?>;
+  const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
   if (saved) {
     const topAvatar = document.querySelector('.user-avatar');
     if (topAvatar) topAvatar.src = saved;

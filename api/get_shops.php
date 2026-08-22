@@ -96,7 +96,12 @@ if ($isCustomerMode) {
 
 $result = $conn->query($sql);
 
-$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+// ── HTTPS detection (aware of reverse proxies like ngrok) ──
+// Direct HTTPS check fails behind ngrok because the tunnel forwards plain
+// HTTP to Apache — so we also check the X-Forwarded-Proto header ngrok sets.
+$isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+$baseUrl = ($isHttps ? 'https' : 'http')
          . '://' . $_SERVER['HTTP_HOST']
          . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\') . '/';
 

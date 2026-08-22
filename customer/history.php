@@ -20,7 +20,21 @@ if ($_SESSION['role'] !== 'customer') {
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
-$avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($userName) . "&background=2563eb&color=fff";
+
+// ── Fetch profile picture from DB (not localStorage — device-specific) ──
+$userProfilePic = null;
+$conn = new mysqli("localhost", "root", "", "fixitdavao");
+if (!$conn->connect_error) {
+    $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $userProfilePic = $row['profile_picture'] ?? null;
+    $stmt->close();
+    $conn->close();
+}
+
+$avatarUrl = $userProfilePic ?: ("https://ui-avatars.com/api/?name=" . urlencode($userName) . "&background=2563eb&color=fff");
 ?>
 <!doctype html>
 <html lang="en">
@@ -557,7 +571,8 @@ $avatarUrl = "https://ui-avatars.com/api/?name=" . urlencode($userName) . "&back
 
       // Auto-load profile pic sa top-bar avatar
 (function() {
-  const saved = localStorage.getItem('profilePic_<?php echo $userId; ?>');
+  const serverPic = <?php echo json_encode($userProfilePic); ?>;
+  const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
   if (saved) {
     const topAvatar = document.querySelector('.user-avatar');
     if (topAvatar) topAvatar.src = saved;
@@ -994,7 +1009,8 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 function openProfileModal() {
-  const saved = localStorage.getItem('profilePic_<?php echo $userId; ?>');
+  const serverPic = <?php echo json_encode($userProfilePic); ?>;
+  const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
   const avatarEl = document.getElementById('profileInitials');
   if (saved) {
     avatarEl.innerHTML = `<img src="${saved}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" />`;
@@ -1045,7 +1061,8 @@ function showPicStatus(msg, ok) {
   if (ok !== null) setTimeout(() => { el.style.display = 'none'; }, 3000);
 }
 (function() {
-  const saved = localStorage.getItem('profilePic_<?php echo $userId; ?>');
+  const serverPic = <?php echo json_encode($userProfilePic); ?>;
+  const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
   if (saved) {
     const topAvatar = document.querySelector('.user-avatar');
     if (topAvatar) topAvatar.src = saved;
