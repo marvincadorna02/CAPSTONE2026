@@ -153,7 +153,8 @@
         }
         html.in-modal .auth-wrap{
           height:100% !important;
-          padding:20px !important;
+          padding:44px 20px 20px !important;
+          align-items:flex-start !important;
         }
         html.in-modal .auth-card{
           animation:none !important;

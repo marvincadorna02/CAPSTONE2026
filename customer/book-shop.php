@@ -6,13 +6,13 @@ $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
     session_destroy();
-    header("../login.php?timeout=1");
+    header("Location: ../login.php?timeout=1");
     exit();
 }
 $_SESSION['last_activity'] = time();
 
-if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
-if ($_SESSION['role'] !== 'customer') { header("../shop-owner/dashboard.php"); exit(); }
+if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
+if ($_SESSION['role'] !== 'customer') { header("Location: ../shop-owner/dashboard.php"); exit(); }
 
 $shopId   = (int)($_GET['id'] ?? 0);
 if (!$shopId) { header("../shop-owner/dashboard.php"); exit(); }
@@ -710,6 +710,13 @@ $servicesJson = json_encode($services);
       document.addEventListener("click", (e) => { if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) { sidebar.classList.remove("active"); document.body.classList.remove("sidebar-open"); } });
     }
     function confirmLogout(e) { e.preventDefault(); document.getElementById('logoutModal').classList.add('visible'); return false; }
+        function confirmLogout(e) {
+      e.preventDefault();
+      document.getElementById('logoutModal').classList.add('visible');
+      sidebar.classList.remove('active');
+      document.body.classList.remove('sidebar-open');
+      return false;
+    }
     function closeLogoutModal() { document.getElementById('logoutModal').classList.remove('visible'); }
 
     // ── Data from PHP ────────────────────────────────────────

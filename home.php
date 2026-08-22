@@ -361,9 +361,9 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
   transform:translateY(14px);transition:transform 0.22s ease;
 }
 .auth-modal-overlay.visible .auth-modal-box{transform:translateY(0);}
-.auth-modal-box iframe{width:100%;height:640px;max-height:90vh;border:none;display:block;background:transparent;}
+.auth-modal-box iframe{width:100%;height:560px;max-height:90vh;border:none;display:block;background:transparent;transition:height 0.2s ease;}
 .auth-modal-close{
-  position:absolute;top:-14px;right:-14px;z-index:5;
+  position:absolute;top:70px;right:52px;z-index:5;
   width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);
   background:rgba(15,23,42,0.95);color:rgba(255,255,255,0.7);
   font-size:18px;line-height:1;cursor:pointer;
@@ -374,7 +374,7 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .auth-modal-close:hover{background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);color:#f59e0b;}
 @media(max-width:480px){
   .auth-modal-box iframe{height:100vh;max-height:100vh;}
-  .auth-modal-close{top:8px;right:8px;}
+  .auth-modal-close{top:58px;right:38px;}
 }
 
 html{
@@ -867,11 +867,26 @@ const authFrame    = document.getElementById('authModalFrame');
 const authClose    = document.getElementById('authModalClose');
 let pollInterval = null;
 
+function resizeAuthFrame() {
+  try {
+    const doc = authFrame.contentWindow.document;
+    const card = doc.querySelector('.auth-card');
+    const contentHeight = card ? card.scrollHeight : doc.body.scrollHeight;
+    // Padding sa taas (para sa X button gap) + gamay nga buffer sa ubos
+    const newHeight = Math.min(contentHeight + 90, window.innerHeight * 0.9);
+    authFrame.style.height = newHeight + 'px';
+  } catch (err) {
+    // cross-origin guard, safe to ignore (dili ni mahitabo sa localhost)
+  }
+}
+
 function openAuthModal(page, e) {
   if (e) e.preventDefault();
   authFrame.src = page;
   authOverlay.classList.add('visible');
   document.body.style.overflow = 'hidden';
+
+  authFrame.onload = resizeAuthFrame;
 
   // Poll para ma-detect kung na-redirect na ang iframe (successful login/signup)
   clearInterval(pollInterval);
@@ -907,8 +922,8 @@ authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) clo
 
 // ── Switch between login/signup/forgot-password inside modal ──
       window.addEventListener('message', (e) => {
-        if (e.data === 'switch-to-forgot') authFrame.src = 'forgot-password.php';
-        if (e.data === 'switch-to-login') authFrame.src = 'login.php';
+        if (e.data === 'switch-to-forgot') { authFrame.src = 'forgot-password.php'; authFrame.onload = resizeAuthFrame; }
+        if (e.data === 'switch-to-login') { authFrame.src = 'login.php'; authFrame.onload = resizeAuthFrame; }
         if (e.data === 'close-modal') closeAuthModal();   // ← bag-o
       });
   </script>

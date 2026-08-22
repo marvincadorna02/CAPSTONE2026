@@ -305,10 +305,11 @@ $conn->close();
       html.in-modal .bg-glow2{
         display:none !important;
       }
-          html.in-modal .auth-wrap{
-      height:100% !important;
-      padding:20px !important;
-    }
+      html.in-modal .auth-wrap{
+          height:100% !important;
+          padding:44px 20px 20px !important;
+          align-items:flex-start !important;
+        }
       html.in-modal .auth-card{
         animation:none !important;
       }
