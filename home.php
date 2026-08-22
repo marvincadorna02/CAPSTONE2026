@@ -93,10 +93,11 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .nav-links a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s;}
 .nav-links a:hover{color:var(--accent-light);}
 .nav-cta{display:flex;align-items:center;gap:10px;}
-.btn-login{padding:9px 20px;background:transparent;border:1.5px solid rgba(255,255,255,0.3);color:#fff;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;text-decoration:none;}
+.btn-login{padding:9px 20px;background:transparent;border:1.5px solid rgba(255,255,255,0.3);color:#fff;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.25s ease;text-decoration:none;}
 .btn-login:hover{border-color:var(--accent);color:var(--accent);}
+
 .btn-register{padding:9px 20px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s;text-decoration:none;}
-.btn-register:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(245,158,11,0.4);}
+.btn-register:hover{background:linear-gradient(135deg,var(--accent-dark),var(--accent-dark));}
 
 /* ── HERO ── */
 .hero{
