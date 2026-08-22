@@ -24,6 +24,14 @@ $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS status ENUM('active','s
 $conn->query("ALTER TABLE users ADD COLUMN IF NOT EXISTS suspend_reason VARCHAR(255) DEFAULT NULL");
 
 $data   = json_decode(file_get_contents("php://input"), true);
+
+// ── CSRF validation ─────────────────────────────────────────
+if (!isset($data['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'])) {
+    echo json_encode(['error' => 'Invalid request.']);
+    exit();
+}
+
 $id     = intval($data['id']     ?? 0);
 $reason = trim($data['reason']   ?? '');
 $action = $data['action']        ?? 'suspend';

@@ -17,6 +17,10 @@ if ($_SESSION['role'] !== 'admin') {
     exit();
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 $userInitials = strtoupper(substr($userName, 0, 2));
 ?>
@@ -684,7 +688,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         try {
           const res  = await fetch("approve_shop.php", {
             method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ id, action:"approve" })
+            body: JSON.stringify({ id, action:"approve", csrf_token:"<?php echo $_SESSION['csrf_token']; ?>" })
           });
           const data = await res.json();
           if (data.success) {
@@ -742,7 +746,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         try {
           const res  = await fetch("approve_shop.php", {
             method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ id:pendingShopId, action:"reject", reason })
+            body: JSON.stringify({ id:pendingShopId, action:"reject", reason, csrf_token:"<?php echo $_SESSION['csrf_token']; ?>" })
           });
           const data = await res.json();
           if (data.success) {
@@ -772,7 +776,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         try {
           const res  = await fetch("approve_shop.php", {
             method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ id, action:"reconsider" })
+            body: JSON.stringify({ id, action:"reconsider", csrf_token:"<?php echo $_SESSION['csrf_token']; ?>" })
           });
           const data = await res.json();
           if (data.success) { loadApprovals(); switchTab("pending"); }

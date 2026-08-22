@@ -6,6 +6,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
     echo json_encode(['error' => 'Unauthorized']); exit();
 }
 
+// ── CSRF validation ─────────────────────────────────────────
+if (!isset($_POST['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+    echo json_encode(['error' => 'Invalid request.']); exit();
+}
+
 $userId = (int)$_SESSION['user_id'];
 $shopId = (int)($_POST['shop_id'] ?? 0);
 

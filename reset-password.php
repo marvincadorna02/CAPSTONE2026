@@ -36,8 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
     $newPass = $_POST['password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
-    if (strlen($newPass) < 6) {
-        $msg = "Password must be at least 6 characters.";
+    if (strlen($newPass) < 8 || strlen($newPass) > 16) {
+        $msg = "Password must be 8 to 16 characters long.";
+        $msgType = 'error';
+    } elseif (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,16}$/', $newPass)) {
+        $msg = "Password must include an uppercase letter, lowercase letter, number, and special character.";
         $msgType = 'error';
     } elseif ($newPass !== $confirm) {
         $msg = "Passwords do not match.";
@@ -95,9 +98,9 @@ $conn->close();
       <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>" />
       <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
       <label>New Password</label>
-      <input type="password" name="password" placeholder="At least 6 characters" required minlength="6" />
+      <input type="password" name="password" placeholder="8-16 chars, upper/lower/number/symbol" required minlength="8" maxlength="16" />
       <label>Confirm Password</label>
-      <input type="password" name="confirm_password" placeholder="Re-enter password" required minlength="6" />
+      <input type="password" name="confirm_password" placeholder="Re-enter password" required minlength="8" maxlength="16" />
       <button type="submit">Reset Password</button>
     </form>
     <?php endif; ?>

@@ -17,6 +17,10 @@ if ($_SESSION['role'] !== 'customer') {
     exit();
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
@@ -581,6 +585,7 @@ $avatarUrl = $userProfilePic ?: ("https://ui-avatars.com/api/?name=" . urlencode
         try {
           const fd = new FormData();
           fd.append('shop_id', shopId);
+          fd.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
           const res  = await fetch('toggle_favorite.php', { method:'POST', body:fd });
           const data = await res.json();
           if (data.success) {

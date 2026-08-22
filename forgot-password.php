@@ -5,6 +5,10 @@ require_once __DIR__ . '/config/env.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $conn = new mysqli("localhost", "root", "", "fixitdavao");
 if ($conn->connect_error) die("DB error: " . $conn->connect_error);
 
@@ -12,6 +16,12 @@ $msg = '';
 $msgType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die("Invalid request.");
+    }
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+
     $email = trim($_POST['email'] ?? '');
 
     if ($email) {
@@ -123,6 +133,7 @@ $conn->close();
   <?php endif; ?>
 
   <form method="POST">
+    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
     <label>Email Address</label>
     <input type="email" name="email" placeholder="you@example.com" required />
     <button type="submit">Send Reset Link</button>

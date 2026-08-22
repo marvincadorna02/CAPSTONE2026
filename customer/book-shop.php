@@ -17,6 +17,10 @@ if ($_SESSION['role'] !== 'customer') { header("../shop-owner/dashboard.php"); e
 $shopId   = (int)($_GET['id'] ?? 0);
 if (!$shopId) { header("../shop-owner/dashboard.php"); exit(); }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
@@ -582,6 +586,7 @@ $servicesJson = json_encode($services);
           <p>Fill in the details below and we'll send your request to the shop.</p>
 
           <form id="bookingForm">
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
             <input type="hidden" name="shop_id" value="<?php echo $shopId; ?>" />
             <input type="hidden" name="customer_id" value="<?php echo $userId; ?>" />
             <input type="hidden" name="service_id" id="selectedServiceId" value="" />
@@ -985,7 +990,7 @@ document.addEventListener('click', (e) => {
 });
 loadNotifications();
 </script>
- <script>
+<script>
 setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes

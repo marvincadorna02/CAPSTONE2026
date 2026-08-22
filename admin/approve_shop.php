@@ -44,6 +44,14 @@ addColumnIfMissing($conn, 'users', 'rejected_at',      "DATETIME DEFAULT NULL");
 
 // ── Input ─────────────────────────────────────────────────────
 $data   = json_decode(file_get_contents("php://input"), true);
+
+// ── CSRF validation ─────────────────────────────────────────
+if (!isset($data['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'] ?? '', $data['csrf_token'])) {
+    echo json_encode(['error' => 'Invalid request.']);
+    exit();
+}
+
 $id     = intval($data['id']     ?? 0);
 $action = $data['action']        ?? '';
 $reason = trim($data['reason']   ?? '');

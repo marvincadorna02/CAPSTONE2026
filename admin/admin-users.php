@@ -15,6 +15,9 @@ if ($_SESSION['role'] !== 'admin') {
     header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-information.php' : '../shop-owner/dashboard.php'));
     exit();
 }
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 $userName  = $_SESSION['name'];
 $userInitials = strtoupper(substr($userName, 0, 2));
 ?>
@@ -544,7 +547,7 @@ function updateStats(users) {
         const btn = document.getElementById("modalConfirmBtn");
         btn.disabled=true; btn.textContent="Suspending...";
         try {
-          const res = await fetch("suspend_user.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:pendingSuspendId,reason,action:"suspend"})});
+          const res = await fetch("suspend_user.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:pendingSuspendId,reason,action:"suspend",csrf_token:"<?php echo $_SESSION['csrf_token']; ?>"})});
           const data = await res.json();
           if (data.success) { closeSuspendModal(); loadUsers(); }
           else alert("Error: "+(data.error||"Failed to suspend."));
@@ -556,7 +559,7 @@ function updateStats(users) {
         if (!confirm("Reactivate this user? They will regain full access.")) return;
         btn.disabled=true;
         try {
-          const res = await fetch("suspend_user.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action:"reactivate"})});
+          const res = await fetch("suspend_user.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action:"reactivate",csrf_token:"<?php echo $_SESSION['csrf_token']; ?>"})});
           const data = await res.json();
           if (data.success) loadUsers();
           else alert("Error: "+(data.error||"Failed to reactivate."));

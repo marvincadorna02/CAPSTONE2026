@@ -17,6 +17,10 @@ if ($_SESSION['role'] !== 'repairshop') {
     exit();
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
@@ -517,6 +521,7 @@ body.sidebar-open .sidebar-backdrop {
           const fd = new FormData();
           fd.append('review_id', reviewId);
           fd.append('reply', text);
+          fd.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
           const res  = await fetch('reply_review.php', { method:'POST', body:fd });
           const data = await res.json();
           if (data.success) {

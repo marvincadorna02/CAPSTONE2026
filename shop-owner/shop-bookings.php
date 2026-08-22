@@ -17,6 +17,10 @@ if ($_SESSION['role'] !== 'repairshop') {
     exit();
 }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $userName  = $_SESSION['name'];
 $userEmail = $_SESSION['email'];
 $userId    = $_SESSION['user_id'];
@@ -561,6 +565,7 @@ body.sidebar-open .sidebar-backdrop {
         const fd = new FormData();
         fd.append('booking_id', bookingId);
         fd.append('status', newStatus);
+        fd.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
         const res  = await fetch('update-booking-status.php', { method:'POST', body:fd });
         const data = await res.json();
         if (data.success) {

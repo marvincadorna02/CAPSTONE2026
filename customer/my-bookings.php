@@ -1,4 +1,4 @@
-  <?php
+<?php
   session_start();
 
   // ── Session timeout (30 mins) ──
@@ -15,6 +15,10 @@ $_SESSION['last_activity'] = time();
   if ($_SESSION['role'] !== 'customer') {
       header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-information.php' : '../admin/admin-dashboard.php'));
       exit();
+  }
+
+  if (empty($_SESSION['csrf_token'])) {
+      $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
   }
 
   $userName  = $_SESSION['name'];
@@ -883,6 +887,7 @@ async function confirmCancelBooking() {
   try {
     const fd = new FormData();
     fd.append('booking_id', cancelBookingId);
+    fd.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
     const res  = await fetch('cancel_booking.php', { method:'POST', body:fd });
     const data = await res.json();
     if (data.success) {
@@ -1076,6 +1081,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
             fd.append('booking_id', rescheduleBookingId);
             fd.append('new_date',   newDate);
             fd.append('new_time',   newTime);
+            fd.append('csrf_token', '<?php echo $_SESSION['csrf_token']; ?>');
             const res  = await fetch('reschedule_booking.php', { method: 'POST', body: fd });
             const data = await res.json();
             if (data.success) {
