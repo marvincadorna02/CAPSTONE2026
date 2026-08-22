@@ -352,16 +352,17 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
   background:rgba(2,6,23,0.72);backdrop-filter:blur(4px);
   display:flex;align-items:center;justify-content:center;
   opacity:0;pointer-events:none;transition:opacity 0.22s ease;
-  padding:20px;
+  padding:20px;overflow:hidden;
 }
 .auth-modal-overlay.visible{opacity:1;pointer-events:all;}
 .auth-modal-box{
-  position:relative;width:100%;max-width:460px;
+  position:relative;width:100%;max-width:460px;max-height:90vh;
   background:transparent;border:none;border-radius:0;box-shadow:none;
   transform:translateY(14px);transition:transform 0.22s ease;
+  overflow:hidden;
 }
 .auth-modal-overlay.visible .auth-modal-box{transform:translateY(0);}
-.auth-modal-box iframe{width:100%;height:560px;max-height:90vh;border:none;display:block;background:transparent;transition:height 0.2s ease;}
+.auth-modal-box iframe{width:100%;height:560px;max-height:90vh;border:none;display:block;background:transparent;transition:height 0.2s ease;overflow:hidden;}
 .auth-modal-close{
   position:absolute;top:70px;right:52px;z-index:5;
   width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);
@@ -771,7 +772,7 @@ html{
 <div class="auth-modal-overlay" id="authModalOverlay">
   <div class="auth-modal-box">
     <button class="auth-modal-close" id="authModalClose">&times;</button>
-    <iframe id="authModalFrame" src="" frameborder="0"></iframe>
+    <iframe id="authModalFrame" src="" frameborder="0" scrolling="no"></iframe>
   </div>
 </div>
 
