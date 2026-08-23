@@ -62,7 +62,7 @@ if (window.top !== window.self) {
 }
 </script>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="format-detection" content="address=no, telephone=no" />
   <title>Dashboard - Fix It Davao</title>
   <link rel="icon" type="image/png" href="../assets/images/logo.png" />

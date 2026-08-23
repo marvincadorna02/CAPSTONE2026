@@ -116,7 +116,7 @@ if (window.top !== window.self) {
   window.top.location.href = window.location.href;
 }
 </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Verify Code - Fix It Davao</title>
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">

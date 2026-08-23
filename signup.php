@@ -135,7 +135,7 @@
       document.documentElement.classList.add('in-modal');
     }
   </script>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       <title>Fix It Davao - Sign Up</title>
       <link rel="icon" type="image/png" href="assets/images/logo.png" />
       <link rel="apple-touch-icon" href="assets/images/logo.png" />

@@ -124,7 +124,13 @@ if (window.top !== window.self) {
       .dash-card {
         background: white; border-radius: 16px; padding: 1.4rem 1.5rem;
         box-shadow: 0 2px 10px rgba(0,0,0,0.07); border:1px solid #f1f5f9;
-        
+        position: relative; overflow: hidden;
+      }
+      /* Subtle brand accent tying charts back to the navy/amber identity */
+      .dash-card::before {
+        content:""; position:absolute; top:0; left:0; right:0; height:3px;
+        background: linear-gradient(90deg, #0f172a, #f59e0b 60%, #fbbf24);
+        opacity:0.85;
       }
       .dash-card-title {
         font-size:0.95rem; font-weight:700; color:#0f172a;
@@ -135,6 +141,18 @@ if (window.top !== window.self) {
       /* ── CHART ── */
       .chart-wrap { height: 200px; position: relative; }
       canvas#trendChart { width:100%!important; height:100%!important; }
+
+      /* ── CHART EMPTY STATE ── */
+      .chart-empty-overlay {
+        position:absolute; inset:0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:6px;
+        background:rgba(248,250,252,0.85); border-radius:10px;
+        color:#94a3b8; font-size:0.78rem; font-weight:600;
+        font-family:'Outfit',sans-serif; text-align:center; padding:10px;
+        opacity:0; pointer-events:none; transition:opacity 0.2s ease;
+      }
+      .chart-empty-overlay.show { opacity:1; pointer-events:all; }
+      .chart-empty-overlay .empty-icon { font-size:1.4rem; opacity:0.5; }
 
       /* ── QUICK ACTIONS ── */
       .quick-actions-grid {
@@ -673,19 +691,20 @@ body.sidebar-open .sidebar-backdrop {
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
     <div>
       <div style="font-size:0.78rem;font-weight:600;color:#64748b;margin-bottom:8px;">Registration Trend — Last 6 months</div>
-      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas><div class="chart-empty-overlay" id="trendEmpty"><span class="empty-icon">📊</span>No registrations yet</div></div>
     </div>
     <div>
       <div style="font-size:0.78rem;font-weight:600;color:#64748b;margin-bottom:8px;">Shop Status Breakdown</div>
-      <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+      <div class="chart-wrap"><canvas id="statusChart"></canvas><div class="chart-empty-overlay" id="statusEmpty"><span class="empty-icon">🏪</span>No shops yet</div></div>
     </div>
   </div>
 
   <!-- Row 2: Line graph -->
   <div style="margin-top:1.25rem;">
     <div style="font-size:0.78rem;font-weight:600;color:#64748b;margin-bottom:8px;">Registration Timeline — All Time</div>
-    <div style="height:180px;position:relative;">
+    <div style="height:180px;position:relative;" class="chart-wrap">
       <canvas id="timelineChart"></canvas>
+      <div class="chart-empty-overlay" id="timelineEmpty"><span class="empty-icon">📈</span>No registrations yet</div>
     </div>
   </div>
 
@@ -838,6 +857,22 @@ body.sidebar-open .sidebar-backdrop {
         document.addEventListener("click", e => { if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) { sidebar.classList.remove("active"); document.body.classList.remove("sidebar-open"); } });
       }
 
+      // ── Brand tooltip theme (shared across all Chart.js instances) ──
+      const brandTooltip = {
+        enabled: true,
+        backgroundColor: "#020617",
+        titleColor: "#fbbf24",
+        bodyColor: "#f8fafc",
+        borderColor: "rgba(245,158,11,0.35)",
+        borderWidth: 1,
+        cornerRadius: 8,
+        padding: 10,
+        titleFont: { family: "Outfit", weight: "700", size: 12 },
+        bodyFont: { family: "Outfit", size: 12 },
+        displayColors: true,
+        boxPadding: 4,
+      };
+
       // ── Animated counter ──────────────────────────────────────
       function animateCount(el, target) {
         let start = 0;
@@ -905,6 +940,8 @@ body.sidebar-open .sidebar-backdrop {
         const approved = trend.map(t => t.approved);
         const ctx = document.getElementById("trendChart").getContext("2d");
 
+        document.getElementById("trendEmpty").classList.toggle("show", !trend.length || totals.every(v => !v));
+
         if (trendChart) trendChart.destroy();
 
         trendChart = new Chart(ctx, {
@@ -915,8 +952,8 @@ body.sidebar-open .sidebar-backdrop {
               {
                 label: "Registered",
                 data: totals,
-                backgroundColor: "rgba(59,130,246,0.18)",
-                borderColor: "#3b82f6",
+                backgroundColor: "rgba(15,23,42,0.15)",
+                borderColor: "#0f172a",
                 borderWidth: 2,
                 borderRadius: 6,
                 borderSkipped: false,
@@ -924,8 +961,8 @@ body.sidebar-open .sidebar-backdrop {
               {
                 label: "Approved",
                 data: approved,
-                backgroundColor: "rgba(16,185,129,0.18)",
-                borderColor: "#10b981",
+                backgroundColor: "rgba(245,158,11,0.22)",
+                borderColor: "#f59e0b",
                 borderWidth: 2,
                 borderRadius: 6,
                 borderSkipped: false,
@@ -940,7 +977,7 @@ body.sidebar-open .sidebar-backdrop {
                 position: "top",
                 labels: { font:{ size:11, family:"Outfit" }, color:"#64748b", boxWidth:12, padding:14 }
               },
-              tooltip: { bodyFont:{ family:"Outfit" }, titleFont:{ family:"Outfit" } }
+              tooltip: brandTooltip
             },
             scales: {
               x: { grid:{ display:false }, ticks:{ font:{ size:11, family:"Outfit" }, color:"#94a3b8" } },
@@ -1284,6 +1321,7 @@ let statusChart = null;
 
 function renderStatusChart(approved, pending, rejected) {
   const ctx = document.getElementById("statusChart").getContext("2d");
+  document.getElementById("statusEmpty").classList.toggle("show", !(approved + pending + rejected));
   if (statusChart) statusChart.destroy();
   statusChart = new Chart(ctx, {
     type: "doughnut",
@@ -1306,7 +1344,7 @@ function renderStatusChart(approved, pending, rejected) {
           position: "bottom",
           labels: { font:{ size:11, family:"Outfit" }, color:"#64748b", boxWidth:12, padding:10 }
         },
-        tooltip: { bodyFont:{ family:"Outfit" }, titleFont:{ family:"Outfit" } }
+        tooltip: brandTooltip
       }
     }
   });
@@ -1323,6 +1361,8 @@ function renderTimelineChart(dailyData) {
     if (row.role === "customer")   customerMap[row.reg_date] = (customerMap[row.reg_date] || 0) + parseInt(row.count);
     if (row.role === "repairshop") shopMap[row.reg_date]     = (shopMap[row.reg_date] || 0) + parseInt(row.count);
   });
+
+  document.getElementById("timelineEmpty").classList.toggle("show", !(dailyData && dailyData.length));
 
   // Determine earliest date
   const allDates = [...Object.keys(customerMap), ...Object.keys(shopMap)];
@@ -1402,7 +1442,7 @@ function renderTimelineChart(dailyData) {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position:"top", labels:{ font:{size:11,family:"Outfit"}, color:"#64748b", boxWidth:12, padding:14 } },
-        tooltip: { bodyFont:{family:"Outfit"}, titleFont:{family:"Outfit"} }
+        tooltip: brandTooltip
       },
       scales: {
         x: { grid:{display:false}, ticks:{ font:{size:10,family:"Outfit"}, color:"#94a3b8", maxTicksLimit:12 } },
