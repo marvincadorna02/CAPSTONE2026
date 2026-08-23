@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note   = trim($_POST['admin_note'] ?? '');
 
     if ($action === 'approve' && $subId) {
-        // Get plan duration
+        // Get plan duration + payment proof fields for verification
         $stmt = $conn->prepare("
-            SELECT ss.shop_id, sp.duration_days
+            SELECT ss.shop_id, ss.payment_ref, ss.gcash_screenshot, sp.duration_days
             FROM shop_subscriptions ss
             JOIN subscription_plans sp ON ss.plan_id = sp.id
             WHERE ss.id = ?
@@ -46,7 +46,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
+        // ── Verify proof of receipt before activating ──
+        $verifyErr = '';
         if ($row) {
+            if (empty($row['gcash_screenshot'])) {
+                $verifyErr = 'Cannot approve: no payment proof/screenshot was uploaded.';
+            } elseif (!empty($row['payment_ref'])) {
+                // Reject reference numbers already used by an approved payment
+                $dupStmt = $conn->prepare("
+                    SELECT COUNT(*) AS c FROM shop_subscriptions
+                    WHERE payment_ref = ? AND id <> ? AND status IN ('active','expired')
+                ");
+                $dupStmt->bind_param("si", $row['payment_ref'], $subId);
+                $dupStmt->execute();
+                $dupCount = (int) $dupStmt->get_result()->fetch_assoc()['c'];
+                $dupStmt->close();
+                if ($dupCount > 0) {
+                    $verifyErr = 'Cannot approve: reference # ' . $row['payment_ref'] . ' was already used by an approved payment (possible duplicate/fake).';
+                }
+            }
+        }
+
+        if ($row && $verifyErr === '') {
             $start = date('Y-m-d');
             $end   = date('Y-m-d', strtotime("+{$row['duration_days']} days"));
             $stmt2 = $conn->prepare("
@@ -107,6 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $msg     = 'Subscription approved and activated!';
             $msgType = 'success';
+        } elseif ($verifyErr !== '') {
+            $msg     = $verifyErr;
+            $msgType = 'error';
         }
     } elseif ($action === 'reject' && $subId) {
         $stmt = $conn->prepare("UPDATE shop_subscriptions SET status='rejected', admin_note=?, updated_at=NOW() WHERE id=?");
@@ -139,6 +163,15 @@ $pendingResult = $conn->query("
     ORDER BY ss.created_at ASC
 ");
 $pending = $pendingResult->fetch_all(MYSQLI_ASSOC);
+
+// ── Flag pending items whose payment_ref was already used by an approved sub ──
+$approvedRefs = [];
+$refRes = $conn->query("SELECT DISTINCT payment_ref FROM shop_subscriptions WHERE status IN ('active','expired') AND payment_ref <> '' AND payment_ref IS NOT NULL");
+while ($r = $refRes->fetch_assoc()) { $approvedRefs[$r['payment_ref']] = true; }
+foreach ($pending as &$p) {
+    $p['dup_ref'] = (!empty($p['payment_ref']) && isset($approvedRefs[$p['payment_ref']]));
+}
+unset($p);
 
 // ── Build notification list from pending subscriptions ─────────
 $notifItems = array_map(function($p) {
@@ -593,6 +626,12 @@ body.sidebar-open .sidebar-backdrop {
           <?php else: ?>
           <div style="background:#f8fafc;border-radius:10px;padding:1rem;text-align:center;color:#94a3b8;font-size:.82rem;margin-bottom:.75rem;">
             📎 No screenshot uploaded
+          </div>
+          <?php endif; ?>
+
+          <?php if (!empty($sub['dup_ref'])): ?>
+          <div style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:8px;padding:8px 12px;font-size:.78rem;font-weight:700;margin-bottom:.75rem;display:flex;align-items:center;gap:6px;">
+            ⚠️ This reference # was already used by an approved payment — verify carefully, likely duplicate/fake.
           </div>
           <?php endif; ?>
 
