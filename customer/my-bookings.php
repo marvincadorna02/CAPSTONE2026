@@ -1272,5 +1272,7 @@ function showPicStatus(msg, ok) {
   }
 })();
 </script>
+
+<?php $chatbotApiPath = '../api/chatbot.php'; include __DIR__ . '/../includes/chatbot-widget.php'; ?>
     </body>
   </html>

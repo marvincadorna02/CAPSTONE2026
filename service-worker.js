@@ -1,4 +1,4 @@
-const CACHE = 'fixitdavao-v1';
+const CACHE = 'fixitdavao-v2';
 const OFFLINE_URLS = [
   'login.php',
   'assets/css/dashboard.css',
@@ -22,8 +22,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Skip non-GET and browser extension requests
-  if (e.request.method !== 'GET' || !e.request.url.startsWith('http')) return;
+  // Skip non-GET, browser extension requests, and API calls (never cache API responses)
+  if (
+    e.request.method !== 'GET' ||
+    !e.request.url.startsWith('http') ||
+    e.request.url.includes('/api/')
+  ) return;
 
   e.respondWith(
     fetch(e.request)

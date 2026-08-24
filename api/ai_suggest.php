@@ -1,4 +1,4 @@
-    <?php
+<?php
     // ai_suggest.php
     // Place this file in: C:\XAMPP\htdocs\FIXITDAVAO\
     // Groq API endpoint for auto-suggesting repair services
@@ -23,7 +23,7 @@ $_SESSION['last_activity'] = time();
     // --- CONFIG ---
     define('GROQ_API_KEY', getenv('GROQ_API_KEY'));
     define('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions');
-    define('GROQ_MODEL', 'llama-3.3-70b-versatile'); // fast & free
+    define('GROQ_MODEL', 'openai/gpt-oss-120b'); // llama-3.3-70b-versatile was deprecated by Groq
 
     // --- INPUT VALIDATION ---
     $input = json_decode(file_get_contents('php://input'), true);
