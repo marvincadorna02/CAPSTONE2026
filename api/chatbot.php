@@ -62,10 +62,58 @@ define('GROQ_API_URL', 'https://api.groq.com/openai/v1/chat/completions');
 define('GROQ_MODEL', 'openai/gpt-oss-120b');
 
 // ── Input ──
-$userMsg    = trim($input['message'] ?? '');
+$userMsg = trim($input['message'] ?? '');
 
 if ($userMsg === '') {
     echo json_encode(['success' => false, 'message' => 'Message is required.']);
+    exit();
+}
+
+if (mb_strlen($userMsg) > 1000) {
+    echo json_encode(['success' => false, 'message' => 'Message is too long. Please keep it under 1000 characters.']);
+    exit();
+}
+
+// ── Rate limiting: protect against spam/abuse of the Groq API ──
+// 1) Cooldown: block rapid-fire sends (e.g. holding Enter or double-clicking)
+// 2) Rate cap: block excessive volume within a rolling time window
+const CHATBOT_COOLDOWN_SECONDS = 3;   // min gap between messages
+const CHATBOT_MAX_PER_WINDOW   = 20;  // max messages per window
+const CHATBOT_WINDOW_MINUTES   = 5;   // rolling window size
+
+$rateStmt = $conn->prepare(
+    "SELECT COUNT(*) AS cnt, MAX(created_at) AS last_time
+     FROM chatbot_messages
+     WHERE user_id = ? AND role = 'user' AND created_at >= (NOW() - INTERVAL ? MINUTE)"
+);
+$rateStmt->bind_param("ii", $userId, CHATBOT_WINDOW_MINUTES);
+$rateStmt->execute();
+$rateRow = $rateStmt->get_result()->fetch_assoc();
+$rateStmt->close();
+
+$recentCount = (int)($rateRow['cnt'] ?? 0);
+$lastTime    = $rateRow['last_time'] ?? null;
+
+if ($lastTime !== null) {
+    $secondsSinceLast = time() - strtotime($lastTime);
+    if ($secondsSinceLast < CHATBOT_COOLDOWN_SECONDS) {
+        $waitMore = CHATBOT_COOLDOWN_SECONDS - $secondsSinceLast;
+        echo json_encode([
+            'success'      => false,
+            'message'      => "You're sending messages too fast. Please wait a moment and try again.",
+            'rate_limited' => true,
+            'retry_after'  => $waitMore,
+        ]);
+        exit();
+    }
+}
+
+if ($recentCount >= CHATBOT_MAX_PER_WINDOW) {
+    echo json_encode([
+        'success'      => false,
+        'message'      => "You've sent a lot of messages recently. Please wait a few minutes before continuing.",
+        'rate_limited' => true,
+    ]);
     exit();
 }
 

@@ -129,6 +129,7 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
     resize: none;
   }
   .fid-chat-input:focus { border-color: #f59e0b; }
+  .fid-chat-input:disabled { background: #f1f5f9; cursor: not-allowed; }
   .fid-chat-send {
     background: linear-gradient(135deg,#f59e0b,#d97706);
     border: none;
@@ -185,6 +186,7 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
   let history = []; // {role, content}
   let sending = false;
   let loaded  = false;
+  let coolingDown = false;
 
   function openPanel()  { panel.classList.add('open'); input.focus(); loadHistory(); }
   function closePanel() { panel.classList.remove('open'); }
@@ -236,7 +238,7 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
 
   async function sendMessage() {
     const text = input.value.trim();
-    if (!text || sending) return;
+    if (!text || sending || coolingDown) return;
 
     sending = true;
     sendBtn.disabled = true;
@@ -259,6 +261,20 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
         history.push({ role: 'user', content: text });
         history.push({ role: 'assistant', content: data.reply });
         if (history.length > 10) history = history.slice(-10);
+      } else if (data.rate_limited) {
+        addMessage(data.message || "You're sending messages too fast. Please slow down.", 'bot');
+        if (data.retry_after) {
+          // Briefly disable sending until the server-side cooldown clears
+          coolingDown = true;
+          sendBtn.disabled = true;
+          input.disabled = true;
+          setTimeout(() => {
+            coolingDown = false;
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+          }, (data.retry_after + 0.2) * 1000);
+        }
       } else {
         addMessage(data.message || "Sorry, I couldn't process that. Please try again.", 'bot');
       }
@@ -267,7 +283,7 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
       addMessage("Sorry, something went wrong. Please try again.", 'bot');
     } finally {
       sending = false;
-      sendBtn.disabled = false;
+      if (!coolingDown) sendBtn.disabled = false;
     }
   }
 

@@ -166,6 +166,22 @@ body.sidebar-open .sidebar-backdrop {
 .sidebar {
   z-index: 950; /* mas taas kaysa backdrop (900) */
 }
+  #messageModal .modal-box { max-width: 380px; padding: 0; overflow: hidden; display: flex; flex-direction: column; height: min(560px, 82vh); }
+  .msg-modal-header { background: linear-gradient(135deg,#0f172a,#1e293b); color: #fff; padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .msg-modal-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #f59e0b; flex-shrink: 0; }
+  .msg-modal-title { font-size: .88rem; font-weight: 800; }
+  .msg-modal-close { margin-left: auto; background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem; padding: 4px; }
+  .msg-modal-close:hover { color: #fff; }
+  .msg-modal-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+  .msg-bubble { max-width: 82%; font-size: .82rem; line-height: 1.45; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg-bubble.mine { align-self: flex-end; background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; border-bottom-right-radius: 4px; }
+  .msg-bubble.theirs { align-self: flex-start; background: #fff; border: 1px solid #e2e8f0; color: #0f172a; border-bottom-left-radius: 4px; }
+  .msg-empty { text-align: center; color: #94a3b8; font-size: .8rem; padding: 30px 10px; }
+  .msg-modal-footer { padding: 10px; border-top: 1px solid #eef2f6; display: flex; gap: 8px; background: #fff; }
+  .msg-modal-input { flex: 1; border: 1px solid #e2e8f0; border-radius: 10px; padding: 9px 12px; font-size: .82rem; font-family: "Outfit", sans-serif; outline: none; resize: none; }
+  .msg-modal-input:focus { border-color: #f59e0b; }
+  .msg-modal-send { background: linear-gradient(135deg,#f59e0b,#d97706); border: none; color: #fff; width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .msg-modal-send:disabled { opacity: .5; cursor: not-allowed; }
 
   </style>
 </head>
@@ -354,8 +370,12 @@ body.sidebar-open .sidebar-backdrop {
   </div>
 </div>
       </div>
-      <div class="sdm-footer">
-        <a id="sdmBookBtn" href="#" class="sdm-book-btn">
+            <div class="sdm-footer" style="display:flex;gap:10px;">
+        <button type="button" class="sdm-book-btn" style="background:linear-gradient(135deg,#1e293b,#0f172a);flex:0 0 auto;width:auto;padding-left:16px;padding-right:16px;" onclick="openMessageModal(sdmCurrentShopId, allShops.find(x=>String(x.id)===String(sdmCurrentShopId))?.name)">
+          <img src="../assets/icons/find.svg" width="14" height="14" alt="" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" />
+          Message
+        </button>
+        <a id="sdmBookBtn" href="#" class="sdm-book-btn" style="flex:1;">
           <img src="../assets/icons/book.svg" width="14" height="14" alt="" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" />
           Book This Shop
         </a>
@@ -374,6 +394,27 @@ body.sidebar-open .sidebar-backdrop {
       <div class="map-modal-footer" id="mapModalAddress"></div>
     </div>
   </div>
+
+<div class="modal-overlay" id="messageModal">
+  <div class="modal-box">
+    <div class="msg-modal-header">
+      <img id="msgModalAvatar" class="msg-modal-avatar" src="" alt="" />
+      <div class="msg-modal-title" id="msgModalTitle"></div>
+      <button class="msg-modal-close" onclick="closeMessageModal()">✕</button>
+    </div>
+    <div class="msg-modal-body" id="msgModalBody">
+      <div class="msg-empty">Loading conversation…</div>
+    </div>
+    <div class="msg-modal-footer">
+      <textarea id="msgModalInput" class="msg-modal-input" rows="1" placeholder="Type a message..."></textarea>
+      <button id="msgModalSend" class="msg-modal-send" aria-label="Send">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
 
   <!-- ════════════════ MAIN CONTENT ════════════════ -->
   <main class="main-content">
@@ -1210,6 +1251,100 @@ const shopMarker = L.marker([lat, lng], { icon: makeShopIcon(36) })
     if (e.target === this) closeDetailsModal();
   });
 
+  // ── Message Modal (customer <-> shop) ─────────────────────────
+  let msgCurrentOtherId = null;
+  let msgSending = false;
+
+  function openMessageModal(otherId, otherName) {
+    msgCurrentOtherId = otherId;
+    document.getElementById('msgModalTitle').textContent = otherName || 'Shop';
+    document.getElementById('msgModalAvatar').src =
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(otherName || 'Shop')}&background=f59e0b&color=fff&size=80`;
+    document.getElementById('msgModalBody').innerHTML = '<div class="msg-empty">Loading conversation…</div>';
+    document.getElementById('messageModal').classList.add('visible');
+    loadMessageThread();
+  }
+
+  function closeMessageModal() {
+    document.getElementById('messageModal').classList.remove('visible');
+    msgCurrentOtherId = null;
+  }
+
+  async function loadMessageThread() {
+    if (!msgCurrentOtherId) return;
+    try {
+      const res = await fetch('../api/messages.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'thread', other_id: msgCurrentOtherId })
+      });
+      const data = await res.json();
+      const bodyEl = document.getElementById('msgModalBody');
+      if (!data.success) {
+        bodyEl.innerHTML = '<div class="msg-empty">Could not load conversation.</div>';
+        return;
+      }
+      if (data.other_name) document.getElementById('msgModalTitle').textContent = data.other_name;
+      if (data.other_avatar) document.getElementById('msgModalAvatar').src = data.other_avatar;
+
+      if (!data.messages.length) {
+        bodyEl.innerHTML = '<div class="msg-empty">No messages yet. Say hello!</div>';
+        return;
+      }
+      bodyEl.innerHTML = data.messages.map(m => {
+        const mine = m.sender_role === 'customer'; // customer page → customer messages are "mine"
+        return `<div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(m.message)}</div>`;
+      }).join('');
+      bodyEl.scrollTop = bodyEl.scrollHeight;
+    } catch (err) {
+      document.getElementById('msgModalBody').innerHTML = '<div class="msg-empty">Network error. Please try again.</div>';
+    }
+  }
+
+  async function sendShopMessage() {
+    const input = document.getElementById('msgModalInput');
+    const text = input.value.trim();
+    if (!text || msgSending || !msgCurrentOtherId) return;
+
+    msgSending = true;
+    document.getElementById('msgModalSend').disabled = true;
+
+    const bodyEl = document.getElementById('msgModalBody');
+    if (bodyEl.querySelector('.msg-empty')) bodyEl.innerHTML = '';
+    bodyEl.insertAdjacentHTML('beforeend', `<div class="msg-bubble mine">${escHtml(text)}</div>`);
+    bodyEl.scrollTop = bodyEl.scrollHeight;
+    input.value = '';
+    input.style.height = 'auto';
+
+    try {
+      const res = await fetch('../api/messages.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', other_id: msgCurrentOtherId, message: text })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        bodyEl.insertAdjacentHTML('beforeend', `<div class="msg-empty">${escHtml(data.message || 'Failed to send.')}</div>`);
+      }
+    } catch (err) {
+      bodyEl.insertAdjacentHTML('beforeend', '<div class="msg-empty">Network error. Message not sent.</div>');
+    } finally {
+      msgSending = false;
+      document.getElementById('msgModalSend').disabled = false;
+    }
+  }
+
+  document.getElementById('msgModalSend').addEventListener('click', sendShopMessage);
+  document.getElementById('msgModalInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendShopMessage(); }
+  });
+  document.getElementById('msgModalInput').addEventListener('input', function () {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 90) + 'px';
+  });
+  document.getElementById('messageModal').addEventListener('click', function (e) {
+    if (e.target === this) closeMessageModal();
+  });
   // ── Filters ──────────────────────────────────────────────────
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function() {

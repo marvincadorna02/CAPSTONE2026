@@ -281,6 +281,7 @@ body.sidebar-open .sidebar-backdrop {
           <a href="shop-bookings.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/booking.svg" alt="" /></span><span class="nav-text">Bookings</span></a>
           <a href="shop-services.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/services.svg" alt="" /></span><span class="nav-text">Services &amp; Fees</span></a>
           <a href="shop-reviews.php" class="nav-item active"><span class="nav-icon"><img src="../assets/icons/reviews.svg" alt="" /></span><span class="nav-text">Reviews</span></a>
+          <a href="shop-messages.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/find.svg" alt="Messages" /></span><span class="nav-text">Messages</span></a>
            <a href="shop-subscription.php" class="nav-item">
   <span class="nav-icon"><img src="../assets/icons/approve.svg" alt="Subscription" /></span>
   <span class="nav-text">Subscription</span>

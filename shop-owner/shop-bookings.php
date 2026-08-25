@@ -6,12 +6,12 @@ $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&
     (time() - $_SESSION['last_activity']) > $timeout) {
     session_destroy();
-    header("../login.php?timeout=1");
+    header("Location: ../login.php?timeout=1");
     exit();
 }
 $_SESSION['last_activity'] = time();
 
-if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
+if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
 if ($_SESSION['role'] !== 'repairshop') {
     header("Location: " . ($_SESSION['role'] === 'customer' ? 'dashboard.php' : '../admin/admin-dashboard.php'));
     exit();
@@ -328,6 +328,7 @@ body.sidebar-open .sidebar-backdrop {
   </style>
 </head>
 <body class="role-repairshop">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
   <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
 
   <aside class="sidebar">
@@ -341,6 +342,7 @@ body.sidebar-open .sidebar-backdrop {
         <a href="shop-bookings.php" class="nav-item active"><span class="nav-icon"><img src="../assets/icons/booking.svg" alt="" /></span><span class="nav-text">Bookings</span></a>
         <a href="shop-services.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/services.svg" alt="" /></span><span class="nav-text">Services &amp; Fees</span></a>
         <a href="shop-reviews.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/reviews.svg" alt="" /></span><span class="nav-text">Reviews</span></a>
+        <a href="shop-messages.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/find.svg" alt="" /></span><span class="nav-text">Messages</span></a>
         <a href="shop-subscription.php" class="nav-item">
   <span class="nav-icon"><img src="../assets/icons/approve.svg" alt="Subscription" /></span>
   <span class="nav-text">Subscription</span>
@@ -530,9 +532,10 @@ body.sidebar-open .sidebar-backdrop {
     // ── Mobile menu ──────────────────────────────────────────
     const mobileMenuToggle = document.getElementById("mobileMenuToggle");
     const sidebar = document.querySelector(".sidebar");
+    const backdrop = document.getElementById("sidebarBackdrop");
     if (mobileMenuToggle) {
       mobileMenuToggle.addEventListener("click", () => { sidebar.classList.toggle("active"); document.body.classList.toggle("sidebar-open"); });
-      document.addEventListener("click", (e) => { if (!sidebar.contains(e.target) && !mobileMenuToggle.contains(e.target)) { sidebar.classList.remove("active"); document.body.classList.remove("sidebar-open"); } });
+      if (backdrop) backdrop.addEventListener("click", () => { sidebar.classList.remove("active"); document.body.classList.remove("sidebar-open"); });
     }
     function confirmLogout(e) {
   e.preventDefault();
