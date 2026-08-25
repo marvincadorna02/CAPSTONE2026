@@ -470,7 +470,7 @@
                 <span class="nav-text">Reviews</span>
               </a>
               <a href="shop-messages.php" class="nav-item">
-                  <span class="nav-icon"><img src="../assets/icons/find.svg" alt="Messages" /></span>
+                  <span class="nav-icon"><img src="../assets/icons/talk.svg" alt="Messages" /></span>
                   <span class="nav-text">Messages</span>
                 </a>
               <a href="shop-subscription.php" class="nav-item active">

@@ -186,6 +186,7 @@ body.sidebar-open .sidebar-backdrop {
   </style>
 </head>
 <body class="<?php echo $bodyClass; ?>">
+<?php include __DIR__ . '/../includes/page-loader.php'; ?>
 
   <!-- Mobile toggle -->
   <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
@@ -214,6 +215,10 @@ body.sidebar-open .sidebar-backdrop {
         <a href="../customer/history.php" class="nav-item">
           <span class="nav-icon"><img src="../assets/icons/history.svg" alt="" /></span>
           <span class="nav-text">History</span>
+        </a>
+        <a href="../customer/messages.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/talk.svg" alt="" /></span>
+          <span class="nav-text">Messages</span>
         </a>
       </div>
       <?php endif; ?>
@@ -468,6 +473,9 @@ body.sidebar-open .sidebar-backdrop {
             </button>
             <button class="filter-btn" data-filter="tablets">
               <span style="display:flex;align-items:center;gap:5px"><img src="../assets/icons/tablet.svg" width="16" height="16" alt="" /> Tablets</span>
+            </button>
+            <button class="filter-btn" data-filter="rating">
+              <span style="display:flex;align-items:center;gap:5px"><img src="../assets/icons/shine.svg" width="16" height="16" alt="" /> Top Rated</span>
             </button>
             <button class="filter-btn" id="nearMeBtn">
   <span style="display:flex;align-items:center;gap:5px">

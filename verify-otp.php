@@ -251,7 +251,7 @@ if (window.top !== window.self) {
                 <input type="hidden" name="otp_code" id="otpCode" />
 
                 <label class="remember-row">
-                    <input type="checkbox" name="remember_device" value="1" checked />
+                    <input type="checkbox" name="remember_device" value="1" />
                     <span>Remember this device for 30 days</span>
                 </label>
 

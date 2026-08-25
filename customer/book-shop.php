@@ -444,6 +444,7 @@ $servicesJson = json_encode($services);
         <a href="my-bookings.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/book.svg" alt="" /></span><span class="nav-text">My Bookings</span></a>
         <a href="favorites.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/favorite.svg" alt="" /></span><span class="nav-text">Favorites</span></a>
         <a href="history.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/history.svg" alt="" /></span><span class="nav-text">History</span></a>
+        <a href="messages.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/talk.svg" alt="" /></span><span class="nav-text">Messages</span></a>
       </div>
     </nav>
     <div class="sidebar-footer">

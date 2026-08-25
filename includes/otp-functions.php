@@ -108,7 +108,7 @@ function issueTrustedDeviceToken($conn, $userId) {
         [
             'expires'  => strtotime('+' . TRUSTED_DEVICE_DAYS . ' days'),
             'path'     => '/',
-            'secure'   => !empty($_SERVER['HTTPS']),
+            'secure'   => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
             'httponly' => true,
             'samesite' => 'Lax',
         ]

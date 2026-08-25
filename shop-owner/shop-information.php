@@ -268,6 +268,7 @@ body.sidebar-open .sidebar-backdrop {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   </head>
   <body class="role-repairshop">
+  <?php include __DIR__ . '/../includes/page-loader.php'; ?>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <?php if ($saved): ?>
@@ -307,7 +308,7 @@ body.sidebar-open .sidebar-backdrop {
   <span class="nav-text">Reviews</span>
 </a>
 <a href="shop-messages.php" class="nav-item">
-  <span class="nav-icon"><img src="../assets/icons/find.svg" alt="Messages" /></span>
+  <span class="nav-icon"><img src="../assets/icons/talk.svg" alt="Messages" /></span>
   <span class="nav-text">Messages</span>
 </a>
 <a href="shop-subscription.php" class="nav-item">

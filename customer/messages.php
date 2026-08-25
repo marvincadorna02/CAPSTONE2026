@@ -11,7 +11,7 @@ if (isset($_SESSION['last_activity']) &&
 $_SESSION['last_activity'] = time();
 
 if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
-if ($_SESSION['role'] !== 'repairshop') { header("Location: dashboard.php"); exit(); }
+if ($_SESSION['role'] !== 'customer') { header("Location: ../login.php"); exit(); }
 
 $userId   = $_SESSION['user_id'];
 $userName = $_SESSION['name'];
@@ -257,7 +257,7 @@ $userName = $_SESSION['name'];
 
   </style>
 </head>
-<body class="role-repairshop">
+<body class="role-customer">
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
@@ -268,30 +268,26 @@ $userName = $_SESSION['name'];
       <h2 class="brand-name">Fix It Davao</h2>
     </div>
     <nav class="sidebar-nav">
-      <div class="nav-section" data-role="repairshop">
-        <a href="shop-information.php" class="nav-item">
-          <span class="nav-icon"><img src="../assets/icons/shop.svg" alt="" /></span>
-          <span class="nav-text">My Shop</span>
+      <div class="nav-section" data-role="customer">
+        <a href="../shop-owner/dashboard.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/find.svg" alt="" /></span>
+          <span class="nav-text">Find Repair Shops</span>
         </a>
-        <a href="shop-bookings.php" class="nav-item">
-          <span class="nav-icon"><img src="../assets/icons/booking.svg" alt="" /></span>
-          <span class="nav-text">Bookings</span>
+        <a href="my-bookings.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/book.svg" alt="" /></span>
+          <span class="nav-text">My Bookings</span>
         </a>
-        <a href="shop-services.php" class="nav-item">
-          <span class="nav-icon"><img src="../assets/icons/services.svg" alt="" /></span>
-          <span class="nav-text">Services &amp; Fees</span>
+        <a href="favorites.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/favorite.svg" alt="" /></span>
+          <span class="nav-text">Favorites</span>
         </a>
-        <a href="shop-reviews.php" class="nav-item">
-          <span class="nav-icon"><img src="../assets/icons/reviews.svg" alt="" /></span>
-          <span class="nav-text">Reviews</span>
+        <a href="history.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/history.svg" alt="" /></span>
+          <span class="nav-text">History</span>
         </a>
-        <a href="shop-messages.php" class="nav-item active">
+        <a href="messages.php" class="nav-item active">
           <span class="nav-icon"><img src="../assets/icons/talk.svg" alt="" /></span>
           <span class="nav-text">Messages</span>
-        </a>
-               <a href="shop-subscription.php" class="nav-item">
-          <span class="nav-icon"><img src="../assets/icons/approve.svg" alt="" /></span>
-          <span class="nav-text">Subscription</span>
         </a>
       </div>
     </nav>
@@ -465,7 +461,7 @@ function closeLogoutModal() {
         otherAvatar = data.other_avatar || '';
         myAvatar    = data.my_avatar || '';
         if (!data.messages.length) { bodyEl.innerHTML = '<div class="chat-empty">No messages yet.</div>'; return; }
-        bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === 'shop')).join('');
+        bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === 'customer')).join('');
         bodyEl.scrollTop = bodyEl.scrollHeight;
       } catch (err) {
         document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Network error.</div>';

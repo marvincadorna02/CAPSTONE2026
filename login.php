@@ -755,9 +755,17 @@ $conn->close();
           const forgotPasswordWrap = document.getElementById("forgotPasswordWrap");
           if (role === "admin") {
             emailGroup.style.display = "none"; usernameGroup.style.display = "block"; accessCodeGroup.style.display = "block";
+
+                emailInput.removeAttribute("required");
+                emailInput.disabled = true;
+
+                usernameInput.setAttribute("required", "");
+                usernameInput.disabled = false;
+                accessCodeInput.setAttribute("required", "");
+                accessCodeInput.disabled = false;
             emailInput.removeAttribute("required"); usernameInput.setAttribute("required", ""); accessCodeInput.setAttribute("required", "");
-            // Admin login isn't email-based (username + access code), so a
-            // "forgot password" email-reset flow doesn't apply here.
+
+
             if (forgotPasswordWrap) forgotPasswordWrap.style.display = "none";
           } else {
             emailGroup.style.display = "block"; usernameGroup.style.display = "none"; accessCodeGroup.style.display = "none";

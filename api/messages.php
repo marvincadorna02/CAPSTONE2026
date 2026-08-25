@@ -130,6 +130,13 @@ if ($action === 'thread') {
         exit();
     }
 
+    // Logged-in user's own avatar (shop logo for shop owner, profile picture for customer)
+    $meStmt = $conn->prepare("SELECT logo_url, profile_picture FROM users WHERE id = ?");
+    $meStmt->bind_param("i", $myId);
+    $meStmt->execute();
+    $me = $meStmt->get_result()->fetch_assoc();
+    $meStmt->close();
+
     $stmt = $conn->prepare(
         "SELECT id, sender_role, message, created_at, is_read
          FROM messages WHERE shop_id = ? AND customer_id = ? ORDER BY id ASC"
@@ -159,6 +166,7 @@ if ($action === 'thread') {
         'messages'   => $msgs,
         'other_name' => $other['display_name'],
         'other_avatar' => $other['logo_url'] ?: $other['profile_picture'],
+        'my_avatar'    => ($me['logo_url'] ?? '') ?: ($me['profile_picture'] ?? ''),
     ]);
     exit();
 }

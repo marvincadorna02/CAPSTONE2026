@@ -547,6 +547,7 @@ body.sidebar-open .sidebar-backdrop {
 </script>
   </head>
   <body class="role-admin">
+  <?php include __DIR__ . '/../includes/page-loader.php'; ?>
     <button class="mobile-menu-toggle" id="mobileMenuToggle">☰</button>
 
     <aside class="sidebar">
