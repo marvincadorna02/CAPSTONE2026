@@ -406,6 +406,10 @@
           .pill-pending { background: #fef3c7; color: #92400e; }
           .pill-expired { background: #fee2e2; color: #991b1b; }
           .pill-rejected{ background: #f1f5f9; color: #64748b; }
+          .sub-filter { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem; }
+          .sub-filter-btn { padding:6px 14px;border:1.5px solid #e2e8f0;border-radius:20px;background:white;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s; }
+          .sub-filter-btn:hover { border-color:#cbd5e1; }
+          .sub-filter-btn.active { background:#0f172a;color:white;border-color:#0f172a; }
 
           .dash-card { background: white; border-radius: 16px; padding: 1.4rem 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid #f1f5f9; margin-bottom: 1.5rem; }
 
@@ -755,6 +759,13 @@
             <?php if (!empty($history)): ?>
             <div class="dash-card">
               <div style="font-size:.95rem;font-weight:800;color:#0f172a;margin:0 0 1rem;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:8px;"><img src="../assets/icons/receipt.svg" width="18" height="18"> Subscription History</div>
+              <div class="sub-filter" id="subFilter">
+                <button class="sub-filter-btn active" data-filter="all">All</button>
+                <button class="sub-filter-btn" data-filter="pending">Pending</button>
+                <button class="sub-filter-btn" data-filter="active">Active</button>
+                <button class="sub-filter-btn" data-filter="expired">Expired</button>
+                <button class="sub-filter-btn" data-filter="rejected">Rejected</button>
+              </div>
               <div style="overflow-x:auto;">
                 <table class="history-table">
                   <thead>
@@ -770,7 +781,7 @@
                   </thead>
                   <tbody>
                                 <?php foreach ($history as $h): ?>
-                  <tr>
+                  <tr data-status="<?php echo $h['status']; ?>">
                     <td><strong><?php echo htmlspecialchars($h['plan_name']); ?></strong></td>
                     <td>₱<?php echo number_format($h['price'], 2); ?></td>
                     <td>
@@ -787,6 +798,23 @@
                   </tbody>
                 </table>
               </div>
+              <script>
+                (function () {
+                  const bar = document.getElementById('subFilter');
+                  if (!bar) return;
+                  const rows = document.querySelectorAll('table.history-table tbody tr');
+                  bar.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.sub-filter-btn');
+                    if (!btn) return;
+                    bar.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const f = btn.dataset.filter;
+                    rows.forEach(r => {
+                      r.style.display = (f === 'all' || r.dataset.status === f) ? '' : 'none';
+                    });
+                  });
+                })();
+              </script>
             </div>
             <?php endif; ?>
 

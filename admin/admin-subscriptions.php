@@ -381,6 +381,11 @@ $conn->close();
     .pill-pending  { background:#fef3c7;color:#92400e; }
     .pill-expired  { background:#fee2e2;color:#991b1b; }
     .pill-rejected { background:#f1f5f9;color:#64748b; }
+    .sub-filter { display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:1rem; }
+    .sub-filter-btn { padding:6px 14px;border:1.5px solid #e2e8f0;border-radius:20px;background:white;color:#64748b;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s; }
+    .sub-filter-btn:hover { border-color:#cbd5e1; }
+    .sub-filter-btn.active { background:#0f172a;color:white;border-color:#0f172a; }
+    .sub-filter-select { margin-left:auto;padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:10px;background:white;color:#374151;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif; }
     .btn-expire-sm { padding:4px 10px;border:1px solid #ef4444;border-radius:8px;background:white;color:#ef4444;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .2s; }
     .btn-expire-sm:hover { background:#fee2e2; }
 
@@ -658,6 +663,23 @@ body.sidebar-open .sidebar-backdrop {
           <p>No subscriptions yet.</p>
         </div>
         <?php else: ?>
+        <?php
+          $shopOptions = [];
+          foreach ($allSubs as $s) { $shopOptions[$s['shop_id']] = $s['shop_name'] ?: $s['shop_owner']; }
+        ?>
+        <div class="sub-filter" id="subFilter">
+          <button class="sub-filter-btn active" data-filter="all">All</button>
+          <button class="sub-filter-btn" data-filter="pending">Pending</button>
+          <button class="sub-filter-btn" data-filter="active">Active</button>
+          <button class="sub-filter-btn" data-filter="expired">Expired</button>
+          <button class="sub-filter-btn" data-filter="rejected">Rejected</button>
+          <select class="sub-filter-select" id="shopFilter">
+            <option value="all">All Shops</option>
+            <?php foreach ($shopOptions as $sid => $sname): ?>
+            <option value="<?php echo $sid; ?>"><?php echo htmlspecialchars($sname); ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
         <div style="overflow-x:auto;">
           <table class="sub-table">
             <thead>
@@ -674,7 +696,7 @@ body.sidebar-open .sidebar-backdrop {
             </thead>
             <tbody>
               <?php foreach ($allSubs as $sub): ?>
-              <tr>
+              <tr data-status="<?php echo $sub['status']; ?>" data-shop="<?php echo $sub['shop_id']; ?>">
                 <td>
                   <div style="font-weight:700;color:#0f172a;"><?php echo htmlspecialchars($sub['shop_name'] ?: $sub['shop_owner']); ?></div>
                   <div style="font-size:.72rem;color:#94a3b8;"><?php echo htmlspecialchars($sub['email']); ?></div>
@@ -701,6 +723,31 @@ body.sidebar-open .sidebar-backdrop {
             </tbody>
           </table>
         </div>
+        <script>
+          (function () {
+            const bar = document.getElementById('subFilter');
+            if (!bar) return;
+            const rows = document.querySelectorAll('table.sub-table tbody tr');
+            const shopSel = document.getElementById('shopFilter');
+            function apply() {
+              const st = bar.querySelector('.sub-filter-btn.active')?.dataset.filter || 'all';
+              const sh = shopSel ? shopSel.value : 'all';
+              rows.forEach(r => {
+                const okStatus = (st === 'all' || r.dataset.status === st);
+                const okShop = (sh === 'all' || r.dataset.shop === sh);
+                r.style.display = (okStatus && okShop) ? '' : 'none';
+              });
+            }
+            bar.addEventListener('click', function (e) {
+              const btn = e.target.closest('.sub-filter-btn');
+              if (!btn) return;
+              bar.querySelectorAll('.sub-filter-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              apply();
+            });
+            if (shopSel) shopSel.addEventListener('change', apply);
+          })();
+        </script>
         <?php endif; ?>
       </div>
 

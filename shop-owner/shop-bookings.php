@@ -69,7 +69,7 @@ $bResult = $conn->prepare("
     LEFT JOIN users u ON u.id = b.customer_id
     WHERE b.shop_id = ?
     ORDER BY
-      FIELD(b.status,'pending','confirmed','completed','cancelled'),
+      FIELD(b.status,'pending','confirmed','completed','paid','claimed','cancelled','no_show'),
       b.booking_date ASC, b.booking_time ASC
 ");
 $bResult->bind_param("i", $userId);
@@ -79,7 +79,7 @@ while ($b = $result->fetch_assoc()) $bookings[] = $b;
 $bResult->close();
 
 // ── Count per status ─────────────────────────────────────────
-$counts = ['all'=>0,'pending'=>0,'confirmed'=>0,'completed'=>0,'cancelled'=>0];
+$counts = ['all'=>0,'pending'=>0,'confirmed'=>0,'completed'=>0,'paid'=>0,'claimed'=>0,'cancelled'=>0];
 foreach ($bookings as $b) {
     $counts['all']++;
     $counts[$b['status']] = ($counts[$b['status']] ?? 0) + 1;
@@ -149,6 +149,8 @@ $conn->close();
     .status-completed { background:#dbeafe; color:#1e40af; }
     .status-cancelled { background:#fee2e2; color:#991b1b; }
     .status-no_show { background: #f3e8ff; color: #6b21a8; }
+    .status-paid    { background:#ccfbf1; color:#115e59; }
+    .status-claimed { background:#e0e7ff; color:#3730a3; }
 .btn-noshow { background: linear-gradient(135deg,#8b5cf6,#7c3aed); color: white; }
 .btn-noshow:hover { background: linear-gradient(135deg,#7c3aed,#6d28d9); color: white; }
 
@@ -188,6 +190,10 @@ $conn->close();
 .btn-cancel:hover   { background:linear-gradient(135deg,#dc2626,#b91c1c); color:white; }
     .btn-view-detail    { background:#f1f5f9; color:#475569; }
     .btn-view-detail:hover { background:#e2e8f0; }
+    .btn-paid    { background:linear-gradient(135deg,#14b8a6,#0d9488); color:white; }
+    .btn-paid:hover    { background:linear-gradient(135deg,#0d9488,#0f766e); color:white; }
+    .btn-claimed { background:linear-gradient(135deg,#6366f1,#4f46e5); color:white; }
+    .btn-claimed:hover { background:linear-gradient(135deg,#4f46e5,#4338ca); color:white; }
     .action-btn:disabled { opacity:.4; cursor:not-allowed; }
 
     /* ── EMPTY STATE ── */
@@ -421,6 +427,8 @@ body.sidebar-open .sidebar-backdrop {
         <button class="tab-btn" data-status="pending">Pending (<?php echo $counts['pending']; ?>)</button>
         <button class="tab-btn" data-status="confirmed">Confirmed (<?php echo $counts['confirmed']; ?>)</button>
         <button class="tab-btn" data-status="completed">Completed (<?php echo $counts['completed']; ?>)</button>
+        <button class="tab-btn" data-status="paid">Paid (<?php echo $counts['paid']; ?>)</button>
+        <button class="tab-btn" data-status="claimed">Claimed (<?php echo $counts['claimed']; ?>)</button>
         <button class="tab-btn" data-status="cancelled">Cancelled (<?php echo $counts['cancelled']; ?>)</button>
       </div>
 
@@ -513,6 +521,14 @@ body.sidebar-open .sidebar-backdrop {
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" style="width:1em;height:1em;vertical-align:middle;"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M41-24.9c-9.4-9.4-24.6-9.4-33.9 0S-2.3-.3 7 9.1l528 528c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9L311.5 245.7c55-10.9 96.5-59.5 96.5-117.7 0-66.3-53.7-120-120-120-58.2 0-106.8 41.5-117.7 96.5L41-24.9zM235.6 305.4C147.9 316.6 80 391.5 80 482.3 80 498.7 93.3 512 109.7 512l332.5 0-206.6-206.6z"/></svg>
   No Show
 </button>
+            <?php elseif ($b['status'] === 'completed'): ?>
+              <button class="action-btn btn-paid" onclick="updateStatus(<?php echo $b['id']; ?>,'paid',this)">
+                <img src="../assets/icons/nice.svg" width="13" height="13" alt="" /> Mark as Paid
+              </button>
+            <?php elseif ($b['status'] === 'paid'): ?>
+              <button class="action-btn btn-claimed" onclick="updateStatus(<?php echo $b['id']; ?>,'claimed',this)">
+                <img src="../assets/icons/nice.svg" width="13" height="13" alt="" /> Mark as Claimed
+              </button>
             <?php endif; ?>
             <button class="action-btn btn-view-detail" onclick='viewDetail(<?php echo json_encode($b); ?>)'>
               <img src="../assets/icons/view.svg" width="13" height="13" alt="" /> View Details
@@ -560,7 +576,7 @@ body.sidebar-open .sidebar-backdrop {
 
     // ── Update booking status via AJAX ───────────────────────
     async function updateStatus(bookingId, newStatus, btn) {
-      const labels = { confirmed:'Confirm this booking?', cancelled:'Decline/cancel this booking?', completed:'Mark as completed?', no_show:'Mark customer as no-show?' };
+      const labels = { confirmed:'Confirm this booking?', cancelled:'Decline/cancel this booking?', completed:'Mark as completed?', no_show:'Mark customer as no-show?', paid:'Mark this booking as paid?', claimed:'Mark the device as claimed by the customer?' };
       if (!confirm(labels[newStatus] || 'Are you sure?')) return;
 
       btn.disabled = true;
@@ -601,8 +617,8 @@ body.sidebar-open .sidebar-backdrop {
           </div>`;
       }
 
-      const order = ['pending', 'confirmed', 'completed'];
-      const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed' };
+      const order = ['pending', 'confirmed', 'completed', 'paid', 'claimed'];
+      const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', paid: 'Paid', claimed: 'Claimed' };
       const currentIdx = order.indexOf(status);
 
       return `<div class="booking-stepper">` + order.map((key, idx) => {
@@ -621,8 +637,8 @@ body.sidebar-open .sidebar-backdrop {
 
     // ── View detail modal ────────────────────────────────────
       function viewDetail(b) {
-      const statusColors = { pending:'#92400e', confirmed:'#065f46', completed:'#1e40af', cancelled:'#991b1b' };
-      const statusBg     = { pending:'#fef3c7', confirmed:'#d1fae5', completed:'#dbeafe', cancelled:'#fee2e2' };
+      const statusColors = { pending:'#92400e', confirmed:'#065f46', completed:'#1e40af', cancelled:'#991b1b', no_show:'#6b21a8', paid:'#115e59', claimed:'#3730a3' };
+      const statusBg     = { pending:'#fef3c7', confirmed:'#d1fae5', completed:'#dbeafe', cancelled:'#fee2e2', no_show:'#f3e8ff', paid:'#ccfbf1', claimed:'#e0e7ff' };
 
       document.getElementById('detailStepper').innerHTML = renderStepper(b.status);
 
@@ -647,6 +663,10 @@ body.sidebar-open .sidebar-backdrop {
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#10b981,#059669);" onclick="closeDetailModal();updateStatus(${b.id},'confirmed',document.createElement('button'))">Confirm Booking</button>`;
       } else if (b.status === 'confirmed') {
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#3b82f6,#2563eb);" onclick="closeDetailModal();updateStatus(${b.id},'completed',document.createElement('button'))">Mark Complete</button>`;
+      } else if (b.status === 'completed') {
+        actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#14b8a6,#0d9488);" onclick="closeDetailModal();updateStatus(${b.id},'paid',document.createElement('button'))">Mark as Paid</button>`;
+      } else if (b.status === 'paid') {
+        actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="closeDetailModal();updateStatus(${b.id},'claimed',document.createElement('button'))">Mark as Claimed</button>`;
       }
       document.getElementById('detailActions').innerHTML = actionsHtml;
 

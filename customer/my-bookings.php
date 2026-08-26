@@ -163,6 +163,8 @@ $_SESSION['last_activity'] = time();
         .status-completed { background: #dbeafe; color: #1e40af; }
         .status-cancelled { background: #fee2e2; color: #991b1b; }
         .status-no_show   { background: #f3e8ff; color: #6b21a8; }
+        .status-paid      { background: #ccfbf1; color: #115e59; }
+        .status-claimed   { background: #e0e7ff; color: #3730a3; }
 
         .bc-body { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; padding: .9rem 1.1rem; }
         .bc-detail { display: flex; flex-direction: column; gap: 2px; }
@@ -341,6 +343,14 @@ $_SESSION['last_activity'] = time();
           border: 1px solid #e2e8f0;
         }
         .reschedule-closed-days-hint strong { color: #374151; }
+        .reschedule-policy-note {
+          font-size: .75rem; color: #92400e; margin-bottom: 1rem;
+          padding: 10px 14px; background: #fffbeb; border-radius: 10px;
+          border: 1px solid #fde68a;
+        }
+        .reschedule-policy-note strong { display:block; color:#b45309; margin-bottom:6px; font-size:.78rem; }
+        .reschedule-policy-note ul { margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:3px; }
+        .reschedule-policy-note li { line-height:1.35; }
         .reschedule-modal-footer { display: flex; gap: 8px; padding: 0 1.5rem 1.5rem; }
         .btn-reschedule-confirm {
           flex: 1; padding: 11px; border: none; border-radius: 10px;
@@ -598,6 +608,15 @@ body.sidebar-open .sidebar-backdrop {
             <div class="reschedule-closed-days-hint" id="rescheduleClosedHint" style="display:none;">
               <strong>🗓 Shop open days:</strong> <span id="rescheduleOpenDaysList"></span>
             </div>
+            <div class="reschedule-policy-note">
+              <strong>ℹ️ Rescheduling Policy</strong>
+              <ul>
+                <li>Only <b>Pending</b> or <b>Confirmed</b> bookings can be rescheduled.</li>
+                <li>Must be done at least <b>24 hours</b> before your current appointment.</li>
+                <li>New time must fall within the shop's <b>operating hours</b>.</li>
+                <li>Rescheduling resets your booking to <b>Pending</b> for the shop to re-confirm.</li>
+              </ul>
+            </div>
             <div class="reschedule-form-group">
               <label for="rescheduleDate">New Date *</label>
               <input type="date" id="rescheduleDate" required />
@@ -677,6 +696,8 @@ body.sidebar-open .sidebar-backdrop {
             <button class="tab-btn" data-status="pending">Pending</button>
             <button class="tab-btn" data-status="confirmed">Confirmed</button>
             <button class="tab-btn" data-status="completed">Completed</button>
+            <button class="tab-btn" data-status="paid">Paid</button>
+            <button class="tab-btn" data-status="claimed">Claimed</button>
             <button class="tab-btn" data-status="cancelled">Cancelled</button>
           </div>
 
@@ -752,7 +773,7 @@ body.sidebar-open .sidebar-backdrop {
 
         // ── Count & update tabs ──────────────────────────────────
         function updateTabCounts() {
-          const counts = { all: allBookings.length, pending:0, confirmed:0, completed:0, cancelled:0, no_show:0 };
+          const counts = { all: allBookings.length, pending:0, confirmed:0, completed:0, paid:0, claimed:0, cancelled:0, no_show:0 };
           allBookings.forEach(b => { if (counts[b.status] !== undefined) counts[b.status]++; });
           document.querySelectorAll('.tab-btn').forEach(btn => {
             const s = btn.dataset.status;
@@ -917,7 +938,9 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
           confirmed:'linear-gradient(135deg,#10b981,#059669)',
           completed:'linear-gradient(135deg,#3b82f6,#2563eb)',
           cancelled:'linear-gradient(135deg,#ef4444,#dc2626)',
-          no_show:'linear-gradient(135deg,#8b5cf6,#7c3aed)'
+          no_show:'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+          paid:'linear-gradient(135deg,#14b8a6,#0d9488)',
+          claimed:'linear-gradient(135deg,#6366f1,#4f46e5)'
         };
 
                 function renderStepper(status) {
@@ -937,8 +960,8 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
               </div>`;
           }
 
-          const order = ['pending', 'confirmed', 'completed'];
-          const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed' };
+          const order = ['pending', 'confirmed', 'completed', 'paid', 'claimed'];
+          const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', paid: 'Paid', claimed: 'Claimed' };
           const currentIdx = order.indexOf(status);
 
           return `<div class="booking-stepper">` + order.map((key, idx) => {
@@ -1006,6 +1029,13 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
         function capDay(d) { return d.charAt(0).toUpperCase() + d.slice(1); }
 
         async function openRescheduleModal(bookingId, shopId, shopName, oldDate, oldTime) {
+          // ── Rescheduling policy: block within 24 hours of the current appointment ──
+          const apptTs = new Date(oldDate + 'T' + (oldTime.length === 5 ? oldTime + ':00' : oldTime)).getTime();
+          if (!isNaN(apptTs) && (apptTs - Date.now()) < 86400000) {
+            alert('Rescheduling is only allowed at least 24 hours before your appointment. Please contact the shop directly.');
+            return;
+          }
+
           rescheduleBookingId = bookingId;
           document.getElementById('rescheduleShopName').textContent = shopName;
 

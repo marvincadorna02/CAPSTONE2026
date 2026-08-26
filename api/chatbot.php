@@ -86,7 +86,8 @@ $rateStmt = $conn->prepare(
      FROM chatbot_messages
      WHERE user_id = ? AND role = 'user' AND created_at >= (NOW() - INTERVAL ? MINUTE)"
 );
-$rateStmt->bind_param("ii", $userId, CHATBOT_WINDOW_MINUTES);
+$windowMinutes = CHATBOT_WINDOW_MINUTES;
+$rateStmt->bind_param("ii", $userId, $windowMinutes);
 $rateStmt->execute();
 $rateRow = $rateStmt->get_result()->fetch_assoc();
 $rateStmt->close();

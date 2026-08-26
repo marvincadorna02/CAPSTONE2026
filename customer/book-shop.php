@@ -754,6 +754,35 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
 
     const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 
+    // ── Constrain time picker to shop operating hours ────────
+    const timeInput = document.getElementById('bookingTime');
+    function toHM(t){ return t ? String(t).slice(0,5) : ''; }
+    function clearTimeWindow(){ timeInput.removeAttribute('min'); timeInput.removeAttribute('max'); }
+    function setTimeWindow(dayName){
+      const h = shopHours[dayName];
+      if (!h) { clearTimeWindow(); return; }
+      timeInput.min = toHM(h.open_time || h.open);
+      timeInput.max = toHM(h.close_time || h.close);
+      validateTimeWindow();
+    }
+    function validateTimeWindow(){
+      const dateVal = dateInput.value;
+      if (!dateVal || !timeInput.value) return true;
+      const dayName = DAY_NAMES[new Date(dateVal + 'T00:00:00').getDay()];
+      const h = shopHours[dayName];
+      if (!h) return true;
+      const open = toHM(h.open_time || h.open), close = toHM(h.close_time || h.close);
+      if (timeInput.value < open || timeInput.value > close) {
+        dateHint.textContent = `⚠️ Please pick a time within shop hours (${formatTime(open)} – ${formatTime(close)}).`;
+        dateHint.className = 'date-hint warn';
+        timeInput.classList.add('error');
+        document.getElementById('submitBtn').disabled = true;
+        return false;
+      }
+      timeInput.classList.remove('error');
+      return true;
+    }
+
     dateInput.addEventListener('change', function() {
       const chosen  = new Date(this.value + 'T00:00:00');
       const dayName = DAY_NAMES[chosen.getDay()];
@@ -761,6 +790,7 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
         dateHint.textContent = `⚠️ This shop is closed on ${dayName.charAt(0).toUpperCase()+dayName.slice(1)}s. Please pick another day.`;
         dateHint.className = 'date-hint warn';
         this.classList.add('error');
+        clearTimeWindow();
       } else {
         const h = shopHours[dayName];
         const o = formatTime(h.open_time || h.open);
@@ -768,12 +798,14 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
         dateHint.textContent = `✓ Open ${o} – ${c}`;
         dateHint.className = 'date-hint ok';
         this.classList.remove('error');
+        setTimeWindow(dayName);
       }
       updateSummary();
     });
 
         document.getElementById('bookingTime').addEventListener('change', function() {
       updateSummary();
+      if (!validateTimeWindow()) return;
       checkSlotAvailability();
     });
     dateInput.addEventListener('change', checkSlotAvailability);
@@ -788,6 +820,7 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
       const hint    = dateHint;
 
       if (!dateVal || !timeVal) return;
+      if (!validateTimeWindow()) return;
 
       const myToken = ++availCheckToken;
       hint.textContent = 'Checking availability...';
@@ -896,6 +929,11 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
         dateHint.textContent = '⚠️ This time slot is already booked. Please choose another time.';
         dateHint.className = 'date-hint taken';
         dateInput.scrollIntoView({ behavior:'smooth', block:'center' });
+        return;
+      }
+
+      if (!validateTimeWindow()) {
+        timeInput.scrollIntoView({ behavior:'smooth', block:'center' });
         return;
       }
 

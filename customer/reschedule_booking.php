@@ -67,6 +67,33 @@ if (!in_array($booking['status'], ['pending', 'confirmed'])) {
     echo json_encode(['error' => 'This booking cannot be rescheduled.']); exit();
 }
 
+// ── Rescheduling policy: block if within 24 hours of the current appointment ──
+$apptTs = strtotime($booking['booking_date'] . ' ' . $booking['booking_time']);
+if ($apptTs !== false && ($apptTs - time()) < 86400) {
+    echo json_encode(['error' => 'Rescheduling is only allowed at least 24 hours before your appointment. Please contact the shop directly.']); exit();
+}
+
+// ── Enforce the new time within the shop's operating hours ──
+$dayName = strtolower(date('l', strtotime($newDate)));
+$ohStmt = $conn->prepare("SELECT LOWER(day) AS day, open_time, close_time FROM operating_hours WHERE user_id = ?");
+$ohStmt->bind_param("i", $booking['shop_id']);
+$ohStmt->execute();
+$ohRes = $ohStmt->get_result();
+$shopHours = [];
+while ($r = $ohRes->fetch_assoc()) $shopHours[$r['day']] = $r;
+$ohStmt->close();
+if (!empty($shopHours)) {
+    if (!isset($shopHours[$dayName])) {
+        echo json_encode(['error' => 'The shop is closed on ' . ucfirst($dayName) . 's. Please pick another date.']); exit();
+    }
+    $bt = date('H:i:s', strtotime($newTime));
+    if ($bt < $shopHours[$dayName]['open_time'] || $bt > $shopHours[$dayName]['close_time']) {
+        echo json_encode(['error' => 'Selected time is outside the shop\'s operating hours ('
+            . date('g:i A', strtotime($shopHours[$dayName]['open_time'])) . ' – '
+            . date('g:i A', strtotime($shopHours[$dayName]['close_time'])) . ').']); exit();
+    }
+}
+
 // Save old date/time before update
 $oldDate = $booking['booking_date'];
 $oldTime = $booking['booking_time'];

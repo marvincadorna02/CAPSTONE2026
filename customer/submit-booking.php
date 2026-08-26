@@ -31,7 +31,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS bookings (
     problem_description TEXT,
     booking_date     DATE NOT NULL,
     booking_time     TIME NOT NULL,
-    status           ENUM('pending','confirmed','completed','cancelled') NOT NULL DEFAULT 'pending',
+    status           ENUM('pending','confirmed','completed','cancelled','no_show','paid','claimed') NOT NULL DEFAULT 'pending',
     notes            TEXT DEFAULT NULL,
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
@@ -67,6 +67,32 @@ if (!$shopCheck->get_result()->fetch_assoc()) {
     echo json_encode(['error' => 'Shop not found or unavailable.']); exit();
 }
 $shopCheck->close();
+
+// ── Enforce booking time within shop operating hours ─────────
+$dayName = strtolower(date('l', strtotime($bookingDate)));
+$ohStmt = $conn->prepare("SELECT LOWER(day) AS day, open_time, close_time FROM operating_hours WHERE user_id = ?");
+$ohStmt->bind_param("i", $shopId);
+$ohStmt->execute();
+$ohRes = $ohStmt->get_result();
+$shopHours = [];
+while ($row = $ohRes->fetch_assoc()) $shopHours[$row['day']] = $row;
+$ohStmt->close();
+
+// Only enforce if the shop has configured operating hours
+if (!empty($shopHours)) {
+    if (!isset($shopHours[$dayName])) {
+        $conn->close();
+        echo json_encode(['error' => 'The shop is closed on ' . ucfirst($dayName) . 's. Please pick another date.']); exit();
+    }
+    $oh = $shopHours[$dayName];
+    $bt = date('H:i:s', strtotime($bookingTime));
+    if ($bt < $oh['open_time'] || $bt > $oh['close_time']) {
+        $conn->close();
+        echo json_encode(['error' => 'Selected time is outside the shop\'s operating hours ('
+            . date('g:i A', strtotime($oh['open_time'])) . ' – '
+            . date('g:i A', strtotime($oh['close_time'])) . '). Please adjust the time.']); exit();
+    }
+}
 
 // ── Look up service name if service_id provided ──────────────
 $serviceName = '';
