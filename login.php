@@ -95,11 +95,54 @@ function getLockoutSecondsLeft($conn, $email, $ip, $loginType) {
 $userIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
 $userIp = trim(explode(',', $userIp)[0]);
 
+// ── AJAX: verify admin access code (Step 1 gate) ──────────────
+// Selecting "Admin" reveals only the access-code field. The Continue
+// button posts here; username + password appear only after this returns
+// ok. The final login POST still re-verifies the code server-side.
+if (($_POST['action'] ?? '') === 'verify_access_code') {
+    header('Content-Type: application/json');
+
+    if (!isset($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        echo json_encode(['ok' => false, 'error' => 'Invalid request. Please refresh and try again.']);
+        exit();
+    }
+    if (ADMIN_ACCESS_CODE === '') {
+        echo json_encode(['ok' => false, 'error' => 'Admin credentials are not configured on this server.']);
+        exit();
+    }
+
+    $attempts = getLoginAttempts($conn, 'admin@admin', $userIp, 'admin');
+    if ($attempts >= MAX_ATTEMPTS) {
+        echo json_encode([
+            'ok'      => false,
+            'locked'  => true,
+            'seconds' => getLockoutSecondsLeft($conn, 'admin@admin', $userIp, 'admin'),
+            'error'   => 'Too many failed attempts. Please wait before trying again.'
+        ]);
+        exit();
+    }
+
+    $code = trim($_POST['accessCode'] ?? '');
+    if (hash_equals(ADMIN_ACCESS_CODE, $code)) {
+        echo json_encode(['ok' => true]);
+    } else {
+        recordLoginAttempt($conn, 'admin@admin', $userIp, 'admin');
+        echo json_encode(['ok' => false, 'error' => 'Invalid admin access code.']);
+    }
+    exit();
+}
+
 // ── Handle POST ───────────────────────────────────────────────
 $error              = "";
 $errorTitle         = "";
 $errorType          = "general";
 $lockoutSecondsLeft = 0;
+
+// Admin is a visible option in the login selector. Selecting it reveals the
+// username + access code fields. $adminMode keeps Admin selected across a failed
+// admin POST (userType=admin) or the legacy login.php?admin=1 link.
+$adminMode = (($_GET['admin'] ?? '') === '1') || (($_POST['userType'] ?? '') === 'admin');
 
 // Session timeout message
 if (isset($_GET['timeout'])) {
@@ -498,7 +541,7 @@ $conn->close();
               <div class="user-type-selection">
                 <label class="user-type">
                   <input type="radio" name="userType" value="customer"
-                    <?php echo (!isset($_POST['userType']) || $_POST['userType'] === 'customer') ? 'checked' : ''; ?> />
+                    <?php echo (!$adminMode && (!isset($_POST['userType']) || $_POST['userType'] === 'customer')) ? 'checked' : ''; ?> />
                   <span>Customer</span>
                 </label>
                 <label class="user-type">
@@ -508,7 +551,7 @@ $conn->close();
                 </label>
                 <label class="user-type">
                   <input type="radio" name="userType" value="admin"
-                    <?php echo (isset($_POST['userType']) && $_POST['userType'] === 'admin') ? 'checked' : ''; ?> />
+                    <?php echo $adminMode ? 'checked' : ''; ?> />
                   <span>Admin</span>
                 </label>
               </div>
@@ -543,7 +586,7 @@ $conn->close();
           </div>
         </div>
 
-            <div class="form-group">
+            <div class="form-group" id="passwordGroup">
               <div class="password-wrapper">
                 <input type="password" id="password" name="password" placeholder="Password" required
                   <?php echo (!empty($error) && $errorType === 'general') ? 'class="input-error"' : ''; ?> />
@@ -562,7 +605,8 @@ $conn->close();
             <div id="forgotPasswordWrap" style="text-align:right;margin-top:-8px;margin-bottom:16px;">
   <a href="forgot-password.php" onclick="return goToForgotPassword(event);" style="font-size:.8rem;color:#f59e0b;text-decoration:none;font-weight:600;">Forgot Password?</a>
 </div>
-            <button type="submit" class="sign-in-btn">Sign in</button>
+            <button type="button" class="sign-in-btn" id="adminContinueBtn" style="display:none;">Continue</button>
+            <button type="submit" class="sign-in-btn" id="signInBtn">Sign in</button>
             <div class="signup-link">Don't have an account? <a href="signup.php">Sign Up</a></div>
           </form>
         </div>
@@ -740,54 +784,129 @@ $conn->close();
         const emailGroup     = document.getElementById("emailGroup");
         const usernameGroup  = document.getElementById("usernameGroup");
         const accessCodeGroup = document.getElementById("accessCodeGroup");
+        const passwordGroup  = document.getElementById("passwordGroup");
         const emailInput     = document.getElementById("emailInput");
         const usernameInput  = document.getElementById("usernameInput");
         const accessCodeInput = document.getElementById("accessCodeInput");
+        const passwordInput  = document.getElementById("password");
+        const signInBtn      = document.getElementById("signInBtn");
+        const adminContinueBtn = document.getElementById("adminContinueBtn");
 
         const loginSubtext = document.getElementById("loginSubtext");
         const SUBTEXT_BY_ROLE = {
           customer:   "Sign in to book, manage, or track your repairs.",
           repairshop: "Sign in to manage bookings and grow your repair shop.",
-          admin:      "Only authorize person can access here."
+          admin:      "Enter your admin access code to continue."
         };
+
+        let adminVerified = false;
+
+        // Admin is a 2-step flow: step 1 = access code, step 2 = username + password.
+        function setAdminStep(step) {
+          const showCreds = step === 2;
+          accessCodeGroup.style.display  = showCreds ? "none" : "block";
+          usernameGroup.style.display    = showCreds ? "block" : "none";
+          passwordGroup.style.display    = showCreds ? "block" : "none";
+          signInBtn.style.display        = showCreds ? "block" : "none";
+          adminContinueBtn.style.display = showCreds ? "none" : "block";
+
+          usernameInput.disabled = !showCreds;
+          passwordInput.disabled = !showCreds;
+          if (showCreds) {
+            usernameInput.setAttribute("required", "");
+            passwordInput.setAttribute("required", "");
+          } else {
+            usernameInput.removeAttribute("required");
+            passwordInput.removeAttribute("required");
+          }
+          if (window.top !== window.self) parent.postMessage('resize-auth', '*');
+        }
+
+        async function tryAdminContinue() {
+          const code = accessCodeInput.value.trim();
+          if (!code) {
+            accessCodeInput.classList.add("input-error");
+            accessCodeInput.focus();
+            return;
+          }
+          adminContinueBtn.disabled = true;
+          adminContinueBtn.textContent = "Verifying...";
+          try {
+            const fd = new FormData();
+            fd.append("action", "verify_access_code");
+            fd.append("accessCode", code);
+            fd.append("csrf_token", document.querySelector('input[name="csrf_token"]').value);
+            const res  = await fetch("login.php", { method: "POST", body: fd });
+            const data = await res.json();
+            if (data.ok) {
+              adminVerified = true;
+              setAdminStep(2);
+              usernameInput.focus();
+            } else if (data.locked) {
+              accessCodeInput.classList.add("input-error");
+              showDialog("Too Many Attempts!", data.error, "suspended", data.seconds || 0);
+            } else {
+              accessCodeInput.classList.add("input-error");
+              accessCodeInput.focus();
+              showDialog("Access Denied!", data.error || "Invalid admin access code.", "general");
+            }
+          } catch (err) {
+            showDialog("Connection Error", "Could not verify access code. Please try again.", "general");
+          } finally {
+            adminContinueBtn.disabled = false;
+            adminContinueBtn.textContent = "Continue";
+          }
+        }
 
         function updateFieldsByRole(role) {
           const forgotPasswordWrap = document.getElementById("forgotPasswordWrap");
           if (role === "admin") {
-            emailGroup.style.display = "none"; usernameGroup.style.display = "block"; accessCodeGroup.style.display = "block";
-
-                emailInput.removeAttribute("required");
-                emailInput.disabled = true;
-
-                usernameInput.setAttribute("required", "");
-                usernameInput.disabled = false;
-                accessCodeInput.setAttribute("required", "");
-                accessCodeInput.disabled = false;
-            emailInput.removeAttribute("required"); usernameInput.setAttribute("required", ""); accessCodeInput.setAttribute("required", "");
-
-
+            emailGroup.style.display = "none";
+            accessCodeGroup.style.display = "block";
+            emailInput.disabled = true; emailInput.removeAttribute("required");
+            accessCodeInput.disabled = false; accessCodeInput.setAttribute("required", "");
+            adminVerified = false;
+            setAdminStep(1);                       // start locked to access code only
             if (forgotPasswordWrap) forgotPasswordWrap.style.display = "none";
           } else {
-            emailGroup.style.display = "block"; usernameGroup.style.display = "none"; accessCodeGroup.style.display = "none";
-            emailInput.setAttribute("required", ""); usernameInput.removeAttribute("required"); accessCodeInput.removeAttribute("required");
+            emailGroup.style.display = "block";
+            usernameGroup.style.display = "none";
+            accessCodeGroup.style.display = "none";
+            passwordGroup.style.display = "block";
+            signInBtn.style.display = "block";
+            adminContinueBtn.style.display = "none";
+            emailInput.disabled = false; emailInput.setAttribute("required", "");
+            usernameInput.disabled = true; usernameInput.removeAttribute("required");
+            accessCodeInput.disabled = true; accessCodeInput.removeAttribute("required");
+            passwordInput.disabled = false; passwordInput.setAttribute("required", "");
             if (forgotPasswordWrap) forgotPasswordWrap.style.display = "block";
           }
           emailInput.classList.remove("input-error");
           usernameInput.classList.remove("input-error");
           accessCodeInput.classList.remove("input-error");
-          document.getElementById("password").classList.remove("input-error");
+          passwordInput.classList.remove("input-error");
 
           loginSubtext.textContent = SUBTEXT_BY_ROLE[role] || SUBTEXT_BY_ROLE.customer;
+          if (window.top !== window.self) parent.postMessage('resize-auth', '*');
         }
+
+      adminContinueBtn.addEventListener("click", tryAdminContinue);
+      accessCodeInput.addEventListener("input", () => accessCodeInput.classList.remove("input-error"));
 
       radios.forEach(r => r.addEventListener("change", function () { updateFieldsByRole(this.value); }));
       const checkedRole = document.querySelector('input[name="userType"]:checked');
       if (checkedRole) updateFieldsByRole(checkedRole.value);
 
-      document.getElementById("loginForm").addEventListener("submit", function () {
-        const btn = this.querySelector(".sign-in-btn");
-        btn.textContent = "Logging in..."; btn.disabled = true;
-        setTimeout(() => { btn.textContent = "Sign in"; btn.disabled = false; }, 3000);
+      document.getElementById("loginForm").addEventListener("submit", function (e) {
+        const role = document.querySelector('input[name="userType"]:checked')?.value;
+        // In admin step 1, Enter/submit should just advance, not post.
+        if (role === "admin" && !adminVerified) {
+          e.preventDefault();
+          tryAdminContinue();
+          return;
+        }
+        signInBtn.textContent = "Logging in..."; signInBtn.disabled = true;
+        setTimeout(() => { signInBtn.textContent = "Sign in"; signInBtn.disabled = false; }, 3000);
       });
     </script>
   </body>

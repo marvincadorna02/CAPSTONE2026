@@ -13,6 +13,27 @@ $_SESSION['last_activity'] = time();
 $isLoggedIn = isset($_SESSION['user_id']);
 $userName = $_SESSION['username'] ?? $_SESSION['name'] ?? 'User';
 $userRole = $_SESSION['role'] ?? 'customer';
+
+// ── Load the profile the customer set after login (DB name + picture) ──
+$userProfilePic = null;
+if ($isLoggedIn && !empty($_SESSION['user_id'])) {
+    $conn = new mysqli("localhost", "root", "", "fixitdavao");
+    if (!$conn->connect_error) {
+        $uid  = (int)$_SESSION['user_id'];
+        $stmt = $conn->prepare("SELECT name, profile_picture FROM users WHERE id = ?");
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        if ($row) {
+            $userName       = $row['name'] ?: $userName;
+            $userProfilePic = $row['profile_picture'] ?? null;
+        }
+        $stmt->close();
+        $conn->close();
+    }
+}
+$avatarBg  = $userRole === 'repairshop' ? 'f59e0b' : '2563eb';
+$avatarUrl = $userProfilePic ?: ('https://ui-avatars.com/api/?name=' . urlencode($userName) . "&background={$avatarBg}&color=fff");
 ?>
 
 <!DOCTYPE html>
@@ -98,6 +119,24 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 
 .btn-register{padding:9px 20px;background:linear-gradient(135deg,var(--accent),var(--accent-dark));color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.25s cubic-bezier(0.34,1.56,0.64,1);text-decoration:none;display:inline-block;}
 .btn-register:hover{background:linear-gradient(135deg,var(--accent-dark),var(--accent-dark));transform:rotate(2deg);}
+
+/* ── Logged-in profile chip ── */
+.nav-profile{display:flex;align-items:center;gap:10px;padding:5px 14px 5px 5px;background:rgba(255,255,255,0.06);border:1.5px solid rgba(245,158,11,0.25);border-radius:999px;text-decoration:none;transition:all 0.25s;}
+.nav-profile:hover{border-color:var(--accent);background:rgba(245,158,11,0.1);}
+.nav-profile-avatar{width:34px;height:34px;border-radius:50%;object-fit:cover;background:#fff;flex-shrink:0;}
+.nav-profile-name{color:#fff;font-size:14px;font-weight:700;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav-profile-caret{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(255,255,255,0.7);margin-left:2px;transition:transform 0.25s;flex-shrink:0;}
+.nav-profile-wrap{position:relative;}
+.nav-profile-wrap.open .nav-profile-caret{transform:rotate(180deg);}
+.nav-profile-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:210px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,0.18);padding:6px;opacity:0;visibility:hidden;transform:translateY(-8px);transition:all 0.2s;z-index:200;}
+.nav-profile-wrap.open .nav-profile-menu{opacity:1;visibility:visible;transform:translateY(0);}
+.nav-profile-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:#0f172a;font-size:13.5px;font-weight:600;text-decoration:none;transition:background 0.15s;white-space:nowrap;}
+.nav-profile-item:hover{background:var(--accent-faint,#fff7ed);color:var(--accent-dark);}
+.nav-profile-item img{width:17px;height:17px;opacity:0.7;flex-shrink:0;}
+.nav-profile-item.danger{color:#dc2626;}
+.nav-profile-item.danger:hover{background:#fef2f2;color:#dc2626;}
+.nav-profile-divider{height:1px;background:#eef2f6;margin:5px 4px;}
+@media(max-width:768px){.nav-profile-name{display:none;}.nav-profile{padding:4px;}}
 
 /* ── HERO ── */
 .hero{
@@ -602,8 +641,25 @@ html{
       $dashboardUrl = 'shop-owner/dashboard.php';
   }
 ?>
-    <a href="<?php echo $dashboardUrl; ?>" class="btn-login">Dashboard</a>
-    <a href="logout.php" class="btn-register">Logout</a>
+    <div class="nav-profile-wrap" id="navProfileWrap">
+      <button type="button" class="nav-profile" title="Account" onclick="toggleProfileMenu(event)">
+        <img src="<?php echo htmlspecialchars($avatarUrl); ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="nav-profile-avatar"
+             onerror="this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($userName); ?>&background=<?php echo $avatarBg; ?>&color=fff'" />
+        <span class="nav-profile-name"><?php echo htmlspecialchars($userName); ?></span>
+        <span class="nav-profile-caret"></span>
+      </button>
+      <div class="nav-profile-menu">
+        <a href="<?php echo $dashboardUrl; ?>" class="nav-profile-item"><img src="assets/icons/find.svg" alt="" /> Dashboard</a>
+<?php if($userRole !== 'admin' && $userRole !== 'repairshop'): ?>
+        <a href="customer/my-bookings.php" class="nav-profile-item"><img src="assets/icons/book.svg" alt="" /> My Bookings</a>
+        <a href="customer/favorites.php" class="nav-profile-item"><img src="assets/icons/favorite.svg" alt="" /> Favorites</a>
+        <a href="customer/history.php" class="nav-profile-item"><img src="assets/icons/history.svg" alt="" /> History</a>
+        <a href="shop-owner/dashboard.php?settings=1" class="nav-profile-item"><img src="assets/icons/users.svg" alt="" /> Account Settings</a>
+<?php endif; ?>
+        <div class="nav-profile-divider"></div>
+        <a href="logout.php" class="nav-profile-item danger"><img src="assets/icons/logout.svg" alt="" /> Logout</a>
+      </div>
+    </div>
 <?php else: ?>
     <a href="login.php" class="btn-login" onclick="return openAuthModal('login.php', event)">Log In</a>
     <a href="signup.php" class="btn-register" onclick="return openAuthModal('signup.php', event)">Register Here</a>
@@ -980,6 +1036,7 @@ authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) clo
       window.addEventListener('message', (e) => {
         if (e.data === 'switch-to-forgot') { authFrame.src = 'forgot-password.php'; authFrame.onload = resizeAuthFrame; }
         if (e.data === 'switch-to-login') { authFrame.src = 'login.php'; authFrame.onload = resizeAuthFrame; }
+        if (e.data === 'resize-auth') resizeAuthFrame();
         if (e.data === 'close-modal') closeAuthModal();   // ← bag-o
       });
   </script>
@@ -991,5 +1048,21 @@ authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) clo
     }
   });
 </script>
+<script>
+  function toggleProfileMenu(e) {
+    e.stopPropagation();
+    document.getElementById('navProfileWrap').classList.toggle('open');
+  }
+  document.addEventListener('click', function (e) {
+    const wrap = document.getElementById('navProfileWrap');
+    if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
+  });
+</script>
+
+<?php
+  $chatbotApiPath  = 'api/chatbot.php';
+  $chatbotLogoPath = 'assets/images/logo.png';
+  include __DIR__ . '/includes/chatbot-widget.php';
+?>
 </body>
 </html>

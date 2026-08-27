@@ -8,6 +8,22 @@
  */
 $chatbotApiPath = $chatbotApiPath ?? '../api/chatbot.php';
 $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
+
+// ── Resolve the logged-in customer's avatar (DB profile pic, else initials) ──
+if (session_status() === PHP_SESSION_NONE) session_start();
+$chatbotUserAvatar = '';
+if (!empty($_SESSION['user_id'])) {
+    $c = @new mysqli("localhost", "root", "", "fixitdavao");
+    if ($c && !$c->connect_error) {
+        $st = $c->prepare("SELECT profile_picture, name FROM users WHERE id = ?");
+        $st->bind_param("i", $_SESSION['user_id']);
+        $st->execute();
+        $u = $st->get_result()->fetch_assoc();
+        $st->close(); $c->close();
+        $chatbotUserAvatar = $u['profile_picture']
+            ?: ("https://ui-avatars.com/api/?name=" . urlencode($u['name'] ?? 'U') . "&background=2563eb&color=fff");
+    }
+}
 ?>
 <style>
   /* ── Chatbot floating button ── */
@@ -27,8 +43,14 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
     cursor: pointer;
     z-index: 1400;
     transition: transform .2s ease, box-shadow .2s ease;
+    animation: fidBounce 0.9s ease-in-out infinite;
   }
-  #fidChatToggle:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 34px rgba(245,158,11,0.55); }
+  @keyframes fidBounce {
+    0%, 100%   { transform: translateY(0); }
+    50%        { transform: translateY(-10px); }
+  }
+  #fidChatToggle:hover { animation-play-state: paused; transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 34px rgba(245,158,11,0.55); }
+  #fidChatToggle.fid-chat-active { animation: none; }
   #fidChatToggle svg { width: 26px; height: 26px; }
   #fidChatToggle img { width: 32px; height: 32px; object-fit: contain; border-radius: 50%; }
   #fidChatToggle .fid-chat-dot {
@@ -96,6 +118,12 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
     cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 4px;
   }
   .fid-chat-close:hover { color: #fff; }
+  .fid-chat-clear {
+    margin-left: auto; background: none; border: none; color: #94a3b8;
+    cursor: pointer; line-height: 1; padding: 4px; display: flex; align-items: center;
+  }
+  .fid-chat-clear + .fid-chat-close { margin-left: 0; }
+  .fid-chat-clear:hover { color: #fff; }
 
   .fid-chat-body {
     flex: 1;
@@ -106,10 +134,22 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
     gap: 10px;
     background: #f8fafc;
   }
-  .fid-msg { max-width: 84%; font-size: .82rem; line-height: 1.45; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
-  .fid-msg.bot { align-self: flex-start; background: #fff; border: 1px solid #e2e8f0; color: #0f172a; border-bottom-left-radius: 4px; }
-  .fid-msg.user { align-self: flex-end; background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; border-bottom-right-radius: 4px; }
-  .fid-msg.typing { align-self: flex-start; color: #94a3b8; font-style: italic; }
+  .fid-row { display: flex; align-items: flex-end; gap: 8px; }
+  .fid-row.user { flex-direction: row-reverse; }
+  .fid-avatar {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .fid-avatar.bot { background: #fff; border: 1px solid #e2e8f0; }
+  .fid-avatar.bot img { width: 20px; height: 20px; object-fit: contain; border-radius: 50%; }
+  .fid-avatar.user { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
+  .fid-avatar.user svg { width: 15px; height: 15px; }
+  .fid-avatar.user img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+  .fid-msg { max-width: calc(100% - 44px); font-size: .82rem; line-height: 1.45; padding: 9px 12px; border-radius: 12px; white-space: pre-wrap; word-wrap: break-word; }
+  .fid-msg.bot { background: #fff; border: 1px solid #e2e8f0; color: #0f172a; border-bottom-left-radius: 4px; }
+  .fid-msg.user { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; border-bottom-right-radius: 4px; }
+  .fid-msg.typing { color: #94a3b8; font-style: italic; }
 
   .fid-chat-footer {
     padding: 10px;
@@ -157,10 +197,18 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
       <div class="fid-chat-title">Fix It Davao Help</div>
       <div class="fid-chat-subtitle">Ask about booking, shops, or your account</div>
     </div>
+    <button class="fid-chat-clear" id="fidChatClear" aria-label="Clear conversation" title="Clear conversation">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+      </svg>
+    </button>
     <button class="fid-chat-close" id="fidChatClose" aria-label="Close">✕</button>
   </div>
   <div class="fid-chat-body" id="fidChatBody">
-    <div class="fid-msg bot">Hi! I'm the Fix It Davao Help Assistant. Ask me anything about booking a repair, your account, or how the site works.</div>
+    <div class="fid-row bot">
+      <div class="fid-avatar bot"><img src="<?php echo htmlspecialchars($chatbotLogoPath); ?>" alt="Assistant" /></div>
+      <div class="fid-msg bot">Hi! I'm the Fix It Davao Help Assistant. Ask me anything about booking a repair, your account, or how the site works.</div>
+    </div>
   </div>
   <div class="fid-chat-footer">
     <textarea id="fidChatInput" class="fid-chat-input" rows="1" placeholder="Type your question..."></textarea>
@@ -175,21 +223,26 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
 <script>
 (function () {
   const CHAT_API = <?php echo json_encode($chatbotApiPath); ?>;
+  const LOGO_SRC = <?php echo json_encode($chatbotLogoPath); ?>;
+  const USER_AVATAR_URL = <?php echo json_encode($chatbotUserAvatar); ?>;
+  const USER_AVATAR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
   const toggleBtn = document.getElementById('fidChatToggle');
   const panel     = document.getElementById('fidChatPanel');
   const closeBtn  = document.getElementById('fidChatClose');
+  const clearBtn  = document.getElementById('fidChatClear');
   const body      = document.getElementById('fidChatBody');
   const input     = document.getElementById('fidChatInput');
   const sendBtn   = document.getElementById('fidChatSend');
+  const greetingHTML = body.innerHTML;
 
   let history = []; // {role, content}
   let sending = false;
   let loaded  = false;
   let coolingDown = false;
 
-  function openPanel()  { panel.classList.add('open'); input.focus(); loadHistory(); }
-  function closePanel() { panel.classList.remove('open'); }
+  function openPanel()  { panel.classList.add('open'); toggleBtn.classList.add('fid-chat-active'); input.focus(); loadHistory(); }
+  function closePanel() { panel.classList.remove('open'); toggleBtn.classList.remove('fid-chat-active'); }
 
   // ── Load this user's saved conversation once per page ──
   async function loadHistory() {
@@ -214,21 +267,67 @@ $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
   });
   closeBtn.addEventListener('click', closePanel);
 
+  // ── Clear the saved conversation ──
+  async function clearHistory() {
+    if (sending || coolingDown) return;
+    if (!confirm('Clear this conversation? This cannot be undone.')) return;
+    try {
+      await fetch(CHAT_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear' })
+      });
+    } catch (err) { /* clear locally anyway */ }
+    history = [];
+    body.innerHTML = greetingHTML;
+  }
+  clearBtn.addEventListener('click', clearHistory);
+
+  function makeAvatar(role) {
+    const avatar = document.createElement('div');
+    avatar.className = 'fid-avatar ' + (role === 'user' ? 'user' : 'bot');
+    if (role === 'user') {
+      if (USER_AVATAR_URL) {
+        const img = document.createElement('img');
+        img.src = USER_AVATAR_URL;
+        img.alt = 'You';
+        img.onerror = () => { avatar.innerHTML = USER_AVATAR_SVG; };
+        avatar.appendChild(img);
+      } else {
+        avatar.innerHTML = USER_AVATAR_SVG;
+      }
+    } else {
+      const img = document.createElement('img');
+      img.src = LOGO_SRC;
+      img.alt = 'Assistant';
+      avatar.appendChild(img);
+    }
+    return avatar;
+  }
+
   function addMessage(text, role) {
-    const div = document.createElement('div');
-    div.className = 'fid-msg ' + (role === 'user' ? 'user' : 'bot');
-    div.textContent = text;
-    body.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'fid-row ' + (role === 'user' ? 'user' : 'bot');
+    const bubble = document.createElement('div');
+    bubble.className = 'fid-msg ' + (role === 'user' ? 'user' : 'bot');
+    bubble.textContent = text;
+    row.appendChild(makeAvatar(role));
+    row.appendChild(bubble);
+    body.appendChild(row);
     body.scrollTop = body.scrollHeight;
-    return div;
+    return row;
   }
 
   function addTyping() {
-    const div = document.createElement('div');
-    div.className = 'fid-msg bot typing';
-    div.textContent = 'Typing…';
-    div.id = 'fidTypingIndicator';
-    body.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'fid-row bot';
+    row.id = 'fidTypingIndicator';
+    const bubble = document.createElement('div');
+    bubble.className = 'fid-msg bot typing';
+    bubble.textContent = 'Typing…';
+    row.appendChild(makeAvatar('bot'));
+    row.appendChild(bubble);
+    body.appendChild(row);
     body.scrollTop = body.scrollHeight;
   }
   function removeTyping() {

@@ -18,39 +18,55 @@ $_SESSION['last_activity'] = time();
 
 header('Content-Type: application/json');
 
-// ── Auth guard: customers only ──
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
-}
+// ── Identity: logged-in customers get persisted history + DB rate-limit;
+//    guests (public landing page) get a session-scoped chat, no DB needed. ──
+$isCustomer = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'customer';
+$userId     = $isCustomer ? (int) $_SESSION['user_id'] : 0;
 
-$userId = (int) $_SESSION['user_id'];
-
-// ── DB ──
-$conn = new mysqli("localhost", "root", "", "fixitdavao");
-if ($conn->connect_error) {
-    echo json_encode(['success' => false, 'message' => 'Database unavailable.']);
-    exit();
+// ── DB (only for logged-in customers) ──
+$conn = null;
+if ($isCustomer) {
+    $conn = new mysqli("localhost", "root", "", "fixitdavao");
+    if ($conn->connect_error) {
+        echo json_encode(['success' => false, 'message' => 'Database unavailable.']);
+        exit();
+    }
+    $conn->set_charset("utf8mb4");
 }
-$conn->set_charset("utf8mb4");
 
 // ── Load saved conversation for this user (called on chat open) ──
 $rawInput = file_get_contents('php://input');
 $input    = json_decode($rawInput, true) ?: [];
 
 if (($input['action'] ?? '') === 'load') {
-    $stmt = $conn->prepare("SELECT role, content FROM chatbot_messages WHERE user_id = ? ORDER BY id ASC");
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $res = $stmt->get_result();
     $msgs = [];
-    while ($row = $res->fetch_assoc()) {
-        $msgs[] = ['role' => $row['role'], 'content' => $row['content']];
+    if ($isCustomer) {
+        $stmt = $conn->prepare("SELECT role, content FROM chatbot_messages WHERE user_id = ? ORDER BY id ASC");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $msgs[] = ['role' => $row['role'], 'content' => $row['content']];
+        }
+        $stmt->close();
+        $conn->close();
     }
-    $stmt->close();
-    $conn->close();
     echo json_encode(['success' => true, 'messages' => $msgs]);
+    exit();
+}
+
+// ── Clear this user's saved conversation ──
+if (($input['action'] ?? '') === 'clear') {
+    if ($isCustomer) {
+        $stmt = $conn->prepare("DELETE FROM chatbot_messages WHERE user_id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $stmt->close();
+        $conn->close();
+    } else {
+        unset($_SESSION['chatbot_hits']);
+    }
+    echo json_encode(['success' => true]);
     exit();
 }
 
@@ -81,32 +97,43 @@ const CHATBOT_COOLDOWN_SECONDS = 3;   // min gap between messages
 const CHATBOT_MAX_PER_WINDOW   = 20;  // max messages per window
 const CHATBOT_WINDOW_MINUTES   = 5;   // rolling window size
 
-$rateStmt = $conn->prepare(
-    "SELECT COUNT(*) AS cnt, MAX(created_at) AS last_time
-     FROM chatbot_messages
-     WHERE user_id = ? AND role = 'user' AND created_at >= (NOW() - INTERVAL ? MINUTE)"
-);
-$windowMinutes = CHATBOT_WINDOW_MINUTES;
-$rateStmt->bind_param("ii", $userId, $windowMinutes);
-$rateStmt->execute();
-$rateRow = $rateStmt->get_result()->fetch_assoc();
-$rateStmt->close();
+if ($isCustomer) {
+    // DB-based rate limit for logged-in customers
+    $rateStmt = $conn->prepare(
+        "SELECT COUNT(*) AS cnt, MAX(created_at) AS last_time
+         FROM chatbot_messages
+         WHERE user_id = ? AND role = 'user' AND created_at >= (NOW() - INTERVAL ? MINUTE)"
+    );
+    $windowMinutes = CHATBOT_WINDOW_MINUTES;
+    $rateStmt->bind_param("ii", $userId, $windowMinutes);
+    $rateStmt->execute();
+    $rateRow = $rateStmt->get_result()->fetch_assoc();
+    $rateStmt->close();
 
-$recentCount = (int)($rateRow['cnt'] ?? 0);
-$lastTime    = $rateRow['last_time'] ?? null;
+    $recentCount      = (int)($rateRow['cnt'] ?? 0);
+    $lastTime         = $rateRow['last_time'] ?? null;
+    $secondsSinceLast = $lastTime !== null ? time() - strtotime($lastTime) : null;
+} else {
+    // Session-based rate limit for guests (no DB)
+    $windowStart = time() - CHATBOT_WINDOW_MINUTES * 60;
+    $hits = array_values(array_filter(
+        $_SESSION['chatbot_hits'] ?? [],
+        fn($t) => $t >= $windowStart
+    ));
+    $_SESSION['chatbot_hits'] = $hits;
+    $recentCount      = count($hits);
+    $secondsSinceLast = $hits ? time() - max($hits) : null;
+}
 
-if ($lastTime !== null) {
-    $secondsSinceLast = time() - strtotime($lastTime);
-    if ($secondsSinceLast < CHATBOT_COOLDOWN_SECONDS) {
-        $waitMore = CHATBOT_COOLDOWN_SECONDS - $secondsSinceLast;
-        echo json_encode([
-            'success'      => false,
-            'message'      => "You're sending messages too fast. Please wait a moment and try again.",
-            'rate_limited' => true,
-            'retry_after'  => $waitMore,
-        ]);
-        exit();
-    }
+if ($secondsSinceLast !== null && $secondsSinceLast < CHATBOT_COOLDOWN_SECONDS) {
+    $waitMore = CHATBOT_COOLDOWN_SECONDS - $secondsSinceLast;
+    echo json_encode([
+        'success'      => false,
+        'message'      => "You're sending messages too fast. Please wait a moment and try again.",
+        'rate_limited' => true,
+        'retry_after'  => $waitMore,
+    ]);
+    exit();
 }
 
 if ($recentCount >= CHATBOT_MAX_PER_WINDOW) {
@@ -118,17 +145,27 @@ if ($recentCount >= CHATBOT_MAX_PER_WINDOW) {
     exit();
 }
 
-// ── Load last 10 turns from DB for context (ignore client-sent history) ──
+// ── Conversation context: DB for customers, client-sent history for guests ──
 $history = [];
-$stmt = $conn->prepare("SELECT role, content FROM chatbot_messages WHERE user_id = ? ORDER BY id DESC LIMIT 10");
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$res = $stmt->get_result();
-while ($row = $res->fetch_assoc()) {
-    $history[] = ['role' => $row['role'], 'content' => $row['content']];
+if ($isCustomer) {
+    $stmt = $conn->prepare("SELECT role, content FROM chatbot_messages WHERE user_id = ? ORDER BY id DESC LIMIT 10");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $history[] = ['role' => $row['role'], 'content' => $row['content']];
+    }
+    $stmt->close();
+    $history = array_reverse($history);
+} else {
+    $clientHistory = is_array($input['history'] ?? null) ? $input['history'] : [];
+    foreach (array_slice($clientHistory, -10) as $turn) {
+        $content = trim($turn['content'] ?? '');
+        if ($content !== '') {
+            $history[] = ['role' => ($turn['role'] ?? '') === 'assistant' ? 'assistant' : 'user', 'content' => $content];
+        }
+    }
 }
-$stmt->close();
-$history = array_reverse($history);
 
 // ── System prompt: hard-scope to Fix It Davao platform only ──
 $systemPrompt = <<<PROMPT
@@ -203,12 +240,16 @@ if ($httpCode !== 200 || empty($result['choices'][0]['message']['content'])) {
 
 $reply = trim($result['choices'][0]['message']['content']);
 
-// ── Persist both turns ──
-$stmt = $conn->prepare("INSERT INTO chatbot_messages (user_id, role, content) VALUES (?, 'user', ?), (?, 'assistant', ?)");
-$stmt->bind_param("isis", $userId, $userMsg, $userId, $reply);
-$stmt->execute();
-$stmt->close();
-$conn->close();
+// ── Persist: DB for customers, session hit-counter for guests ──
+if ($isCustomer) {
+    $stmt = $conn->prepare("INSERT INTO chatbot_messages (user_id, role, content) VALUES (?, 'user', ?), (?, 'assistant', ?)");
+    $stmt->bind_param("isis", $userId, $userMsg, $userId, $reply);
+    $stmt->execute();
+    $stmt->close();
+    $conn->close();
+} else {
+    $_SESSION['chatbot_hits'][] = time();
+}
 
 echo json_encode([
     'success' => true,
