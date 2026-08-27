@@ -457,6 +457,10 @@
           </div>
           <nav class="sidebar-nav">
             <div class="nav-section" data-role="repairshop">
+              <a href="shop-dashboard.php" class="nav-item">
+                <span class="nav-icon"><img src="../assets/icons/dashboard.svg" alt="Dashboard" onerror="this.style.display='none'" /></span>
+                <span class="nav-text">Dashboard</span>
+              </a>
               <a href="shop-information.php" class="nav-item">
                 <span class="nav-icon"><img src="../assets/icons/shop.svg" alt="My Shop" /></span>
                 <span class="nav-text">My Shop</span>
@@ -525,7 +529,7 @@
           </div>
         </div>
       </div>
-              <div class="user-profile">
+              <div class="user-profile" onclick="openAccountModal()" style="cursor:pointer;" title="Account settings">
                 <?php if ($avatarUrl): ?>
                 <img src="<?php echo htmlspecialchars($avatarUrl); ?>" alt="<?php echo htmlspecialchars($userName); ?>"
                   style="width:38px;height:38px;border-radius:12px;object-fit:cover;border:2px solid #f59e0b;flex-shrink:0;" />
@@ -1047,5 +1051,6 @@
           window.location.href = "../login.php?timeout=1";
       }, 1800000); // 30 minutes
       </script>
-      </body>
+      <?php include __DIR__ . '/../includes/account-modal.php'; ?>
+</body>
       </html>

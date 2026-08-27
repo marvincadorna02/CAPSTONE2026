@@ -268,7 +268,6 @@ body.sidebar-open .sidebar-backdrop {
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   </head>
   <body class="role-repairshop">
-  <?php include __DIR__ . '/../includes/page-loader.php'; ?>
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
     <?php if ($saved): ?>
@@ -291,6 +290,10 @@ body.sidebar-open .sidebar-backdrop {
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section" data-role="repairshop">
+          <a href="shop-dashboard.php" class="nav-item">
+            <span class="nav-icon"><img src="../assets/icons/dashboard.svg" alt="Dashboard" onerror="this.style.display='none'" /></span>
+            <span class="nav-text">Dashboard</span>
+          </a>
           <a href="shop-information.php" class="nav-item active">
             <span class="nav-icon"><img src="../assets/icons/shop.svg" alt="My Shop" /></span>
             <span class="nav-text">My Shop</span>
@@ -356,7 +359,7 @@ body.sidebar-open .sidebar-backdrop {
     </div>
   </div>
 </div>
-          <div class="user-profile">
+          <div class="user-profile" onclick="openAccountModal()" style="cursor:pointer;" title="Account settings">
             <img src="<?php echo $avatarUrl; ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar" />
             <div class="user-info">
               <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
@@ -893,5 +896,6 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 </script>
-  </body>
+  <?php include __DIR__ . '/../includes/account-modal.php'; ?>
+</body>
 </html>

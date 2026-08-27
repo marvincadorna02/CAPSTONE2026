@@ -13,7 +13,7 @@ $_SESSION['last_activity'] = time();
 
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] !== 'customer') {
-    header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-information.php' : '../admin/admin-dashboard.php'));
+    header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-dashboard.php' : '../admin/admin-dashboard.php'));
     exit();
 }
 

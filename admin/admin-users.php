@@ -12,7 +12,7 @@ if (isset($_SESSION['last_activity']) &&
 $_SESSION['last_activity'] = time();
 if (!isset($_SESSION['user_id'])) { header("../login.php"); exit(); }
 if ($_SESSION['role'] !== 'admin') {
-    header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-information.php' : '../shop-owner/dashboard.php'));
+    header("Location: " . ($_SESSION['role'] === 'repairshop' ? '../shop-owner/shop-dashboard.php' : '../shop-owner/dashboard.php'));
     exit();
 }
 if (empty($_SESSION['csrf_token'])) {

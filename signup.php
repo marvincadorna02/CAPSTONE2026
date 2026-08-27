@@ -1,5 +1,7 @@
 <?php
   session_start();
+  require_once __DIR__ . '/includes/otp-functions.php';
+  require_once __DIR__ . '/includes/email-guard.php';
 
   if (empty($_SESSION['csrf_token'])) {
       $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -7,7 +9,7 @@
 
   if (isset($_SESSION['user_id'])) {
       if ($_SESSION['role'] === 'admin')       header("Location: admin/admin-dashboard.php");
-      elseif ($_SESSION['role'] === 'repairshop') header("Location: shop-owner/shop-information.php");
+      elseif ($_SESSION['role'] === 'repairshop') header("Location: shop-owner/shop-dashboard.php");
       else                                        header("Location: shop-owner/dashboard.php");
       exit();
   }
@@ -52,6 +54,14 @@
   $displayName = "";
   $isPending   = false; // repairshop pending approval
 
+  // Coming back from verify-signup.php after a verified account was created
+  if (!empty($_SESSION['signup_success'])) {
+      $success     = true;
+      $displayName = $_SESSION['signup_success']['name'];
+      $isPending   = $_SESSION['signup_success']['pending'];
+      unset($_SESSION['signup_success']);
+  }
+
   $oldRole     = $_POST['userType']  ?? 'customer';
   $oldName     = $_POST['fullName']  ?? '';
   $oldShopName = $_POST['shopName']  ?? '';
@@ -80,6 +90,8 @@
           $errorTitle = "Fields Required"; $error = "Please fill in all fields before signing up."; $errorType = "general";
       } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
           $errorTitle = "Invalid Email"; $error = "Please enter a valid email address."; $errorType = "general";
+      } elseif ($emailErr = checkEmailQuality($email)) {
+          $errorTitle = "Invalid Email"; $error = $emailErr; $errorType = "general";
           } elseif (strlen($password) < 8 || strlen($password) > 16) {
           $errorTitle = "Weak Password";
           $error = "Password must be 8 to 16 characters long.";
@@ -109,17 +121,32 @@
               // Repairshops start as 'pending', customers are 'approved' by default
               $approvalStatus = ($role === 'repairshop') ? 'pending' : 'approved';
 
-              $insert = $conn->prepare("INSERT INTO users (name, email, password, role, approval_status) VALUES (?, ?, ?, ?, ?)");
-              $insert->bind_param("sssss", $finalName, $email, $hashed, $role, $approvalStatus);
+              // Don't create the account yet — hold it in the session and require
+              // the user to verify the email they registered with first.
+              $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-              if ($insert->execute()) {
-                  $success     = true;
-                  $displayName = $finalName;
-                  $isPending   = ($role === 'repairshop');
+              $_SESSION['signup_pending'] = [
+                  'name'            => $finalName,
+                  'email'           => $email,
+                  'password'        => $hashed,
+                  'role'            => $role,
+                  'approval_status' => $approvalStatus,
+              ];
+              $_SESSION['signup_otp']           = $otp;
+              $_SESSION['signup_otp_expires']   = time() + 300; // 5 minutes
+              $_SESSION['signup_otp_attempts']  = 0;
+              $_SESSION['signup_otp_last_sent'] = time();
+
+              if (sendSignupOTP($email, $finalName, $otp)) {
+                  $conn->close();
+                  header("Location: verify-signup.php");
+                  exit();
               } else {
-                  $errorTitle = "Registration Failed"; $error = "Something went wrong. Please try again."; $errorType = "general";
+                  unset($_SESSION['signup_pending'], $_SESSION['signup_otp'],
+                        $_SESSION['signup_otp_expires'], $_SESSION['signup_otp_attempts'],
+                        $_SESSION['signup_otp_last_sent']);
+                  $errorTitle = "Email Error"; $error = "We couldn't send the verification code. Please try again."; $errorType = "general";
               }
-              $insert->close();
           }
       }
   }

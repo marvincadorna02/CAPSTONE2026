@@ -16,7 +16,7 @@ if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] === 'admin') {
         header("Location: admin/admin-dashboard.php");
     } elseif ($_SESSION['role'] === 'repairshop') {
-        header("Location: shop-owner/shop-information.php");
+        header("Location: shop-owner/shop-dashboard.php");
     } else {
         header("Location: shop-owner/dashboard.php");
     }
@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['name']    = $user['name'];
                             $_SESSION['email']   = $user['email'];
                             $_SESSION['role']    = $user['role'];
-                            header("Location: " . ($user['role'] === 'repairshop' ? 'shop-owner/shop-information.php' : 'shop-owner/dashboard.php'));
+                            header("Location: " . ($user['role'] === 'repairshop' ? 'shop-owner/shop-dashboard.php' : 'shop-owner/dashboard.php'));
                             exit();
                         }
 

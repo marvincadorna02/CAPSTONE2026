@@ -269,6 +269,10 @@ $userName = $_SESSION['name'];
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section" data-role="repairshop">
+        <a href="shop-dashboard.php" class="nav-item">
+          <span class="nav-icon"><img src="../assets/icons/dashboard.svg" alt="Dashboard" onerror="this.style.display='none'" /></span>
+          <span class="nav-text">Dashboard</span>
+        </a>
         <a href="shop-information.php" class="nav-item">
           <span class="nav-icon"><img src="../assets/icons/shop.svg" alt="" /></span>
           <span class="nav-text">My Shop</span>

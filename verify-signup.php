@@ -1,15 +1,16 @@
 <?php
 session_start();
-require_once 'includes/otp-functions.php';
+require_once __DIR__ . '/includes/otp-functions.php';
 
 // ── CSRF token ───────────────────────────────────────────────
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// ── No pending login? Kick back to login ───────────────────────
-if (empty($_SESSION['pending_user_id'])) {
-    header("Location: home.php");
+// ── No pending signup? Kick back to signup ─────────────────────
+$pending = $_SESSION['signup_pending'] ?? null;
+if (!$pending) {
+    header("Location: signup.php");
     exit();
 }
 
@@ -19,13 +20,11 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$pendingId    = $_SESSION['pending_user_id'];
-$pendingRole  = $_SESSION['pending_role'];
-$pendingName  = $_SESSION['pending_name'];
-$pendingEmail = $_SESSION['pending_email'];
+$pendingEmail = $pending['email'];
+$pendingName  = $pending['name'];
 
-$error       = "";
-$resendMsg   = "";
+$error          = "";
+$resendMsg      = "";
 $resendCooldown = 0;
 
 // Mask email para dili full expose sa UI (e.g. m****y@gmail.com)
@@ -33,6 +32,12 @@ function maskEmail($email) {
     [$user, $domain] = explode('@', $email);
     $visible = substr($user, 0, 1);
     return $visible . str_repeat('*', max(strlen($user) - 1, 1)) . '@' . $domain;
+}
+
+function clearSignupSession() {
+    unset($_SESSION['signup_pending'], $_SESSION['signup_otp'],
+          $_SESSION['signup_otp_expires'], $_SESSION['signup_otp_attempts'],
+          $_SESSION['signup_otp_last_sent']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -45,14 +50,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Resend code ─────────────────────────────────────────
     if (isset($_POST['resend'])) {
-        $lastSent = $_SESSION['otp_last_sent'] ?? 0;
+        $lastSent = $_SESSION['signup_otp_last_sent'] ?? 0;
         if (time() - $lastSent < 30) {
             $resendCooldown = 30 - (time() - $lastSent);
             $error = "Please wait before requesting a new code.";
         } else {
-            $sent = generateAndSendOTP($conn, $pendingId, $pendingEmail, $pendingName);
-            if ($sent) {
-                $_SESSION['otp_last_sent'] = time();
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $_SESSION['signup_otp']           = $otp;
+            $_SESSION['signup_otp_expires']   = time() + 300;
+            $_SESSION['signup_otp_attempts']  = 0;
+            $_SESSION['signup_otp_last_sent'] = time();
+
+            if (sendSignupOTP($pendingEmail, $pendingName, $otp)) {
                 $resendMsg = "A new code has been sent to your email.";
             } else {
                 $error = "Failed to resend code. Please try again.";
@@ -65,42 +74,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($inputCode) || !ctype_digit($inputCode) || strlen($inputCode) !== 6) {
             $error = "Please enter the 6-digit code.";
-        } else {
-            $result = verifyOTP($conn, $pendingId, $inputCode);
+        } elseif (($_SESSION['signup_otp_attempts'] ?? 0) >= 5) {
+            $error = "Too many failed attempts. Please request a new code.";
+        } elseif (time() > ($_SESSION['signup_otp_expires'] ?? 0)) {
+            $error = "This code has expired. Please request a new one.";
+        } elseif (hash_equals((string)($_SESSION['signup_otp'] ?? ''), $inputCode)) {
 
-            switch ($result['status']) {
-                case 'valid':
-                    // ── Remember this device? ────────────────
-                    if (!empty($_POST['remember_device'])) {
-                        issueTrustedDeviceToken($conn, $pendingId);
-                    }
+            // ── Code valid — create the account now ──────────
+            $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+            $stmt->bind_param("s", $pendingEmail);
+            $stmt->execute();
+            $stmt->store_result();
+            $taken = $stmt->num_rows > 0;
+            $stmt->close();
 
-                    // ── Finalize login ──────────────────────
-                    session_regenerate_id(true);
-                    $_SESSION['user_id'] = $pendingId;
-                    $_SESSION['name']    = $pendingName;
-                    $_SESSION['email']   = $pendingEmail;
-                    $_SESSION['role']    = $pendingRole;
+            if ($taken) {
+                clearSignupSession();
+                $error = "This email is already registered. Please log in instead.";
+            } else {
+                $ins = $conn->prepare("INSERT INTO users (name, email, password, role, approval_status) VALUES (?, ?, ?, ?, ?)");
+                $ins->bind_param("sssss", $pending['name'], $pending['email'], $pending['password'], $pending['role'], $pending['approval_status']);
 
-                    unset($_SESSION['pending_user_id'], $_SESSION['pending_role'],
-                          $_SESSION['pending_name'], $_SESSION['pending_email'],
-                          $_SESSION['otp_last_sent']);
-
-                    header("Location: " . ($pendingRole === 'repairshop' ? 'shop-owner/shop-dashboard.php' : 'shop-owner/dashboard.php'));
+                if ($ins->execute()) {
+                    $ins->close();
+                    $_SESSION['signup_success'] = [
+                        'name'    => $pending['name'],
+                        'pending' => ($pending['role'] === 'repairshop'),
+                    ];
+                    clearSignupSession();
+                    $conn->close();
+                    header("Location: signup.php");
                     exit();
-
-                case 'expired':
-                    $error = "This code has expired. Please request a new one.";
-                    break;
-                case 'locked':
-                    $error = "Too many failed attempts. Please request a new code.";
-                    break;
-                case 'not_found':
-                    $error = "No active code found. Please request a new one.";
-                    break;
-                default: // invalid
-                    $error = "Incorrect code. Please try again.";
+                } else {
+                    $ins->close();
+                    $error = "Something went wrong creating your account. Please try again.";
+                }
             }
+
+        } else {
+            $_SESSION['signup_otp_attempts'] = ($_SESSION['signup_otp_attempts'] ?? 0) + 1;
+            $error = "Incorrect code. Please try again.";
         }
     }
 }
@@ -117,7 +130,7 @@ if (window.top !== window.self) {
 }
 </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Verify Code - Fix It Davao</title>
+    <title>Verify Your Email - Fix It Davao</title>
     <link rel="icon" type="image/png" href="assets/images/logo.png" />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -188,16 +201,6 @@ if (window.top !== window.self) {
         .alert-error{background:rgba(239,68,68,0.1);border:1.5px solid rgba(239,68,68,0.3);color:#fca5a5;}
         .alert-success{background:rgba(34,197,94,0.1);border:1.5px solid rgba(34,197,94,0.3);color:#86efac;}
 
-        .remember-row{
-            display:flex;align-items:center;gap:8px;
-            justify-content:center;margin-bottom:18px;
-            font-size:12.5px;color:rgba(255,255,255,0.55);
-            cursor:pointer;user-select:none;
-        }
-        .remember-row input{
-            width:15px;height:15px;accent-color:var(--accent);cursor:pointer;
-        }
-
         .verify-btn{
             width:100%;padding:14px;
             background:linear-gradient(135deg,var(--accent),var(--accent-dark));
@@ -231,8 +234,8 @@ if (window.top !== window.self) {
             <div class="icon-badge">
                 <svg viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             </div>
-            <h1>Check Your Email</h1>
-            <p class="subtext">We sent a 6-digit code to<br><strong><?php echo htmlspecialchars(maskEmail($pendingEmail)); ?></strong></p>
+            <h1>Verify Your Email</h1>
+            <p class="subtext">Enter the 6-digit code we sent to<br><strong><?php echo htmlspecialchars(maskEmail($pendingEmail)); ?></strong><br>to finish creating your account.</p>
 
             <?php if (!empty($error)): ?>
                 <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
@@ -250,12 +253,7 @@ if (window.top !== window.self) {
                 </div>
                 <input type="hidden" name="otp_code" id="otpCode" />
 
-                <label class="remember-row">
-                    <input type="checkbox" name="remember_device" value="1" />
-                    <span>Remember this device for 30 days</span>
-                </label>
-
-                <button type="submit" class="verify-btn" id="verifyBtn">Verify Code</button>
+                <button type="submit" class="verify-btn" id="verifyBtn">Verify & Create Account</button>
             </form>
 
             <form method="POST" id="resendForm">
@@ -267,7 +265,7 @@ if (window.top !== window.self) {
                 </div>
             </form>
 
-            <a href="home.php" class="back-link">← Back to Login</a>
+            <a href="signup.php" class="back-link">← Back to Sign Up</a>
         </div>
     </div>
 

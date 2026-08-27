@@ -183,6 +183,7 @@ body.sidebar-open .sidebar-backdrop {
       </div>
       <nav class="sidebar-nav">
         <div class="nav-section" data-role="repairshop">
+          <a href="shop-dashboard.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/dashboard.svg" alt="Dashboard" onerror="this.style.display='none'" /></span><span class="nav-text">Dashboard</span></a>
           <a href="shop-information.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/shop.svg" alt="My Shop" /></span><span class="nav-text">My Shop</span></a>
           <a href="shop-bookings.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/booking.svg" alt="Bookings" /></span><span class="nav-text">Bookings</span></a>
           <a href="shop-services.php" class="nav-item active"><span class="nav-icon"><img src="../assets/icons/services.svg" alt="Services" /></span><span class="nav-text">Services &amp; Fees</span></a>
@@ -231,7 +232,7 @@ body.sidebar-open .sidebar-backdrop {
     </div>
   </div>
 </div>
-          <div class="user-profile">
+          <div class="user-profile" onclick="openAccountModal()" style="cursor:pointer;" title="Account settings">
             <img src="<?php echo $avatarUrl; ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar" />
             <div class="user-info">
               <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
@@ -471,5 +472,6 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 </script>
-  </body>
+  <?php include __DIR__ . '/../includes/account-modal.php'; ?>
+</body>
 </html>

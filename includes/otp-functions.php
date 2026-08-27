@@ -55,6 +55,41 @@ function generateAndSendOTP($conn, $userId, $userEmail, $userName) {
     }
 }
 
+// Sends a signup email-verification code. Unlike generateAndSendOTP this does
+// NOT touch the DB — the code lives in the session until the account is created.
+function sendSignupOTP($userEmail, $userName, $otp) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->SMTPDebug  = 0;
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = $_ENV['MAIL_USERNAME'];
+        $mail->Password   = $_ENV['MAIL_PASSWORD'];
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+        $mail->CharSet    = 'UTF-8';
+
+        $mail->setFrom($_ENV['MAIL_USERNAME'], $_ENV['MAIL_FROM_NAME']);
+        $mail->addAddress($userEmail, $userName);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Verify your Fix It Davao email';
+        $mail->Body    = "
+            <p>Hi {$userName},</p>
+            <p>Use this code to verify your email and finish creating your Fix It Davao account:</p>
+            <h2 style='letter-spacing:4px;'>{$otp}</h2>
+            <p>This code expires in 5 minutes. If you didn't sign up, just ignore this email.</p>
+        ";
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Signup OTP mail error: " . $mail->ErrorInfo);
+        return false;
+    }
+}
+
 function verifyOTP($conn, $userId, $inputCode) {
     $stmt = $conn->prepare(
         "SELECT id, otp_code, expires_at, attempts FROM login_otp

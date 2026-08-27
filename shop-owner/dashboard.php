@@ -21,7 +21,7 @@ $_SESSION['last_activity'] = time();
 
 if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
 if ($_SESSION['role'] === 'admin') { header("Location: ../admin/admin-dashboard.php"); exit(); }
-if ($_SESSION['role'] === 'repairshop') { header("Location: shop-information.php"); exit(); }
+if ($_SESSION['role'] === 'repairshop') { header("Location: shop-dashboard.php"); exit(); }
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -35,13 +35,15 @@ $userId    = $_SESSION['user_id'];
 // ── Fetch profile picture from DB (not localStorage — that's per-device
 // only, so a pic set on one phone/PC won't show up on another) ──
 $userProfilePic = null;
+$userContact    = '';
 $conn = new mysqli("localhost", "root", "", "fixitdavao");
 if (!$conn->connect_error) {
-    $stmt = $conn->prepare("SELECT profile_picture FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT profile_picture, contact_number FROM users WHERE id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $userProfilePic = $row['profile_picture'] ?? null;
+    $userContact    = $row['contact_number'] ?? '';
     $stmt->close();
     $conn->close();
 }
@@ -51,6 +53,8 @@ $pageTitle = $userRole === 'repairshop' ? 'My Repair Shop' : 'Find Repair Shops'
 $avatarBg  = $userRole === 'repairshop' ? 'f59e0b' : '2563eb';
 $avatarUrl = $userProfilePic ?: ("https://ui-avatars.com/api/?name=" . urlencode($userName) . "&background={$avatarBg}&color=fff");
 $bodyClass = "role-{$userRole}";
+
+$acctName = $userName; $acctEmail = $userEmail; $acctContact = $userContact;
 ?>
 <!doctype html>
 <html lang="en">
@@ -303,10 +307,53 @@ body.sidebar-open .sidebar-backdrop {
         </div>
       </div>
       <div id="picStatus" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:.78rem;font-weight:600;text-align:center;"></div>
-      <button onclick="confirmLogout(event)" style="width:100%;margin-top:16px;padding:11px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;font-size:.85rem;font-weight:700;font-family:var(--font);cursor:pointer;">
+      <button onclick="closeProfileModal();openAccountModal();" style="width:100%;margin-top:16px;padding:11px;background:var(--canvas);color:var(--text-primary);border:1px solid var(--border);border-radius:10px;font-size:.85rem;font-weight:700;font-family:var(--font);cursor:pointer;">
+        ⚙ Account Settings
+      </button>
+      <button onclick="confirmLogout(event)" style="width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;font-size:.85rem;font-weight:700;font-family:var(--font);cursor:pointer;">
         Logout
       </button>
     </div>
+  </div>
+</div>
+
+<style>
+  .acct-tab { flex:1; padding:9px; background:var(--canvas,#f1f5f9); border:none; border-radius:10px 10px 0 0; font-size:.8rem; font-weight:700; color:var(--text-muted,#64748b); cursor:pointer; font-family:var(--font,'Outfit',sans-serif); }
+  .acct-tab-active { background:#fff; color:var(--text-primary,#0f172a); box-shadow:inset 0 -2px 0 #2563eb; }
+  .acct-field { margin-bottom:14px; }
+  .acct-field label { display:block; font-size:.72rem; font-weight:700; color:var(--text-muted,#64748b); text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; }
+  .acct-field input { width:100%; padding:10px 12px; border:1px solid var(--border,#e2e8f0); border-radius:10px; font-size:.88rem; font-family:var(--font,'Outfit',sans-serif); box-sizing:border-box; }
+  .acct-field input:focus { outline:none; border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  .acct-msg { display:none; padding:9px 12px; border-radius:8px; font-size:.78rem; font-weight:600; margin-bottom:12px; }
+  .acct-submit { width:100%; padding:11px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border:none; border-radius:10px; font-size:.85rem; font-weight:700; font-family:var(--font,'Outfit',sans-serif); cursor:pointer; }
+  .acct-submit:disabled { opacity:.6; cursor:not-allowed; }
+</style>
+
+<!-- ════════════════ ACCOUNT SETTINGS MODAL ════════════════ -->
+<div class="modal-overlay" id="accountModal">
+  <div class="modal-box" style="max-width:420px;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border,#e2e8f0);">
+      <span style="font-size:1.05rem;font-weight:800;color:var(--text-primary,#0f172a);font-family:var(--font,'Outfit',sans-serif);">Account Settings</span>
+      <button onclick="closeAccountModal()" style="background:var(--canvas,#f1f5f9);border:none;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px;color:var(--text-muted,#64748b);">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;padding:12px 22px 0;">
+      <button id="acctTabProfile" class="acct-tab acct-tab-active" onclick="acctSwitch('profile')">Edit Profile</button>
+      <button id="acctTabPass" class="acct-tab" onclick="acctSwitch('password')">Change Password</button>
+    </div>
+    <form id="acctProfileForm" onsubmit="return saveProfile(event)" style="padding:18px 22px 22px;">
+      <div class="acct-field"><label>Full Name</label><input type="text" id="acctName" required /></div>
+      <div class="acct-field"><label>Email</label><input type="email" id="acctEmail" required /></div>
+      <div class="acct-field"><label>Contact Number</label><input type="text" id="acctContact" /></div>
+      <div id="acctProfileMsg" class="acct-msg"></div>
+      <button type="submit" class="acct-submit">Save Changes</button>
+    </form>
+    <form id="acctPassForm" onsubmit="return savePassword(event)" style="padding:18px 22px 22px;display:none;">
+      <div class="acct-field"><label>Current Password</label><input type="password" id="acctCurrent" required /></div>
+      <div class="acct-field"><label>New Password</label><input type="password" id="acctNew" required /></div>
+      <div class="acct-field"><label>Confirm New Password</label><input type="password" id="acctConfirm" required /></div>
+      <div id="acctPassMsg" class="acct-msg"></div>
+      <button type="submit" class="acct-submit">Update Password</button>
+    </form>
   </div>
 </div>
 
@@ -446,7 +493,7 @@ body.sidebar-open .sidebar-backdrop {
         <div class="user-profile" onclick="openProfileModal()">
           <img src="<?php echo $avatarUrl; ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar" />
           <div class="user-info">
-            <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
+            <span class="user-name" data-acct-name><?php echo htmlspecialchars($userName); ?></span>
             <span class="user-role"><?php echo $roleLabel; ?></span>
           </div>
         </div>
@@ -1743,6 +1790,20 @@ function showPicStatus(msg, ok) {
 document.getElementById('profileModal').addEventListener('click', function(e) {
   if (e.target === this) closeProfileModal();
 });
+
+// ── Account Settings (edit profile + change password) ──
+(function(){
+  const CSRF = <?php echo json_encode($_SESSION['csrf_token']); ?>;
+  const INIT = { name: <?php echo json_encode($acctName); ?>, email: <?php echo json_encode($acctEmail); ?>, contact: <?php echo json_encode($acctContact); ?> };
+  function acctMsg(id, text, ok){ const el=document.getElementById(id); if(!text){el.style.display='none';return;} el.style.display='block'; el.textContent=text; el.style.background=ok?'#d1fae5':'#fee2e2'; el.style.color=ok?'#065f46':'#991b1b'; }
+  window.acctSwitch = function(which){ const p=which==='profile'; document.getElementById('acctProfileForm').style.display=p?'block':'none'; document.getElementById('acctPassForm').style.display=p?'none':'block'; document.getElementById('acctTabProfile').classList.toggle('acct-tab-active',p); document.getElementById('acctTabPass').classList.toggle('acct-tab-active',!p); };
+  window.openAccountModal = function(){ document.getElementById('acctName').value=INIT.name||''; document.getElementById('acctEmail').value=INIT.email||''; document.getElementById('acctContact').value=INIT.contact||''; document.getElementById('acctCurrent').value=''; document.getElementById('acctNew').value=''; document.getElementById('acctConfirm').value=''; acctMsg('acctProfileMsg',''); acctMsg('acctPassMsg',''); acctSwitch('profile'); document.getElementById('accountModal').classList.add('visible'); };
+  window.closeAccountModal = function(){ document.getElementById('accountModal').classList.remove('visible'); };
+  async function post(payload){ const res=await fetch('../api/update_account.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({csrf_token:CSRF},payload))}); return res.json(); }
+  window.saveProfile = async function(e){ e.preventDefault(); const btn=e.target.querySelector('.acct-submit'); btn.disabled=true; try{ const d=await post({action:'update_profile',name:document.getElementById('acctName').value.trim(),email:document.getElementById('acctEmail').value.trim(),contact_number:document.getElementById('acctContact').value.trim()}); acctMsg('acctProfileMsg',d.message||d.error,!!d.success); if(d.success){INIT.name=d.name;INIT.email=d.email;document.querySelectorAll('[data-acct-name]').forEach(el=>el.textContent=d.name);} }catch(err){ acctMsg('acctProfileMsg','Network error. Try again.',false); } btn.disabled=false; return false; };
+  window.savePassword = async function(e){ e.preventDefault(); const btn=e.target.querySelector('.acct-submit'); btn.disabled=true; try{ const d=await post({action:'change_password',current_password:document.getElementById('acctCurrent').value,new_password:document.getElementById('acctNew').value,confirm_password:document.getElementById('acctConfirm').value}); acctMsg('acctPassMsg',d.message||d.error,!!d.success); if(d.success){document.getElementById('acctCurrent').value='';document.getElementById('acctNew').value='';document.getElementById('acctConfirm').value='';} }catch(err){ acctMsg('acctPassMsg','Network error. Try again.',false); } btn.disabled=false; return false; };
+  const ov=document.getElementById('accountModal'); if(ov) ov.addEventListener('click',function(e){ if(e.target===this) closeAccountModal(); });
+})();
 
   </script>
   <script>
