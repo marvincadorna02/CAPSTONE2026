@@ -130,6 +130,13 @@ if ($action === 'thread') {
         exit();
     }
 
+    // IDOR guard: counterpart must have the opposite role
+    $expectedRole = $myRole === 'customer' ? 'repairshop' : 'customer';
+    if ($other['role'] !== $expectedRole) {
+        echo json_encode(['success' => false, 'message' => 'User not found.']);
+        exit();
+    }
+
     // Logged-in user's own avatar (shop logo for shop owner, profile picture for customer)
     $meStmt = $conn->prepare("SELECT logo_url, profile_picture FROM users WHERE id = ?");
     $meStmt->bind_param("i", $myId);
