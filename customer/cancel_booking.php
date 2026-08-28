@@ -35,7 +35,8 @@ if ($conn->connect_error) {
 }
 
 // Only allow cancelling own pending/confirmed bookings
-$stmt = $conn->prepare("UPDATE bookings SET status = 'cancelled' WHERE id = ? AND customer_id = ? AND status IN ('pending','confirmed')");
+$conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by ENUM('customer','shop') DEFAULT NULL");
+$stmt = $conn->prepare("UPDATE bookings SET status = 'cancelled', cancelled_by = 'customer' WHERE id = ? AND customer_id = ? AND status IN ('pending','confirmed')");
 $stmt->bind_param("ii", $bookingId, $userId);
 $stmt->execute();
 

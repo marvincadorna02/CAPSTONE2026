@@ -60,6 +60,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS subscription_notification_reads (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_sub_notif (shop_id, subscription_id, status_seen)
 )");
+$conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by ENUM('customer','shop') DEFAULT NULL");
 
 // Handle mark all read
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -69,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT $userId, b.id, b.status
             FROM bookings b
             WHERE b.shop_id = $userId
-              AND b.status IN ('pending','confirmed','completed','cancelled')
+              AND (b.status = 'pending' OR (b.status = 'cancelled' AND b.cancelled_by = 'customer'))
               AND (b.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                    OR b.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))");
         $conn->query("INSERT IGNORE INTO shop_review_reads (shop_id, review_id)
@@ -150,7 +151,7 @@ $stmt = $conn->prepare("
     FROM bookings b
     LEFT JOIN users u ON u.id = b.customer_id
     WHERE b.shop_id = ?
-      AND b.status IN ('pending','confirmed','completed','cancelled')
+      AND ( b.status = 'pending' OR (b.status = 'cancelled' AND b.cancelled_by = 'customer') )
       AND b.id NOT IN ($excludeIds)
       AND (b.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
            OR b.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))
@@ -250,6 +251,43 @@ if ($subTableCheck && $subTableCheck->num_rows > 0) {
         ];
     }
     $stmt4->close();
+}
+
+// ── 5. Fetch unread direct messages from customers ────────────
+$msgTableCheck = $conn->query("SHOW TABLES LIKE 'messages'");
+if ($msgTableCheck && $msgTableCheck->num_rows > 0) {
+    $stmt5 = $conn->prepare("
+        SELECT m.customer_id AS other_id,
+               u.name             AS customer_name,
+               u.profile_picture  AS customer_picture,
+               COUNT(*)           AS unread_msgs,
+               MAX(m.created_at)  AS last_time
+        FROM messages m
+        LEFT JOIN users u ON u.id = m.customer_id
+        WHERE m.shop_id = ?
+          AND m.sender_role = 'customer'
+          AND m.is_read = 0
+        GROUP BY m.customer_id, customer_name, customer_picture
+        ORDER BY last_time DESC
+        LIMIT 10
+    ");
+    $stmt5->bind_param("i", $userId);
+    $stmt5->execute();
+    $result5 = $stmt5->get_result();
+    while ($row = $result5->fetch_assoc()) {
+        $notifications[] = [
+            'type'             => 'message',
+            'status'           => 'message',
+            'other_id'         => (int)$row['other_id'],
+            'customer_name'    => $row['customer_name'] ?? 'A customer',
+            'customer_picture' => $row['customer_picture'] ?? null,
+            'service_name'     => null,
+            'unread'           => (int)$row['unread_msgs'],
+            'is_read'          => false,
+            'time'             => $row['last_time'],
+        ];
+    }
+    $stmt5->close();
 }
 
 // ── Sort all by time DESC (newest first) ──────────────────────

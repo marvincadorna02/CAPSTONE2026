@@ -5,6 +5,7 @@
 //   { action: 'list' }                          -> list of conversation threads for the logged-in user
 //   { action: 'thread', other_id: <id> }         -> full message history with one counterpart, marks incoming as read
 //   { action: 'send',   other_id: <id>, message: '...' } -> send a message
+//   { action: 'contacts', q: '...' }             -> (shop only) customers the shop can start a new chat with
 
 session_start();
 
@@ -178,6 +179,44 @@ if ($action === 'thread') {
     exit();
 }
 
+// ── CONTACTS: customers this shop can start a new chat with ──
+if ($action === 'contacts') {
+    if ($myRole !== 'repairshop') {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit();
+    }
+    $q    = trim($input['q'] ?? '');
+    $like = '%' . $q . '%';
+
+    $sql = "SELECT u.id, u.name, u.profile_picture AS avatar,
+                   (SELECT COUNT(*) FROM messages m WHERE m.shop_id = ? AND m.customer_id = u.id) AS has_thread
+            FROM users u
+            WHERE u.role = 'customer'
+              AND ( EXISTS (SELECT 1 FROM bookings b WHERE b.shop_id = ? AND b.customer_id = u.id)
+                    OR EXISTS (SELECT 1 FROM messages m2 WHERE m2.shop_id = ? AND m2.customer_id = u.id) )";
+    if ($q !== '') { $sql .= " AND u.name LIKE ?"; }
+    $sql .= " ORDER BY u.name ASC LIMIT 50";
+
+    $stmt = $conn->prepare($sql);
+    if ($q !== '') $stmt->bind_param("iiis", $myId, $myId, $myId, $like);
+    else           $stmt->bind_param("iii",  $myId, $myId, $myId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $contacts = [];
+    while ($row = $res->fetch_assoc()) {
+        $contacts[] = [
+            'id'         => (int)$row['id'],
+            'name'       => $row['name'],
+            'avatar'     => $row['avatar'],
+            'has_thread' => (int)$row['has_thread'] > 0,
+        ];
+    }
+    $stmt->close();
+    $conn->close();
+    echo json_encode(['success' => true, 'contacts' => $contacts]);
+    exit();
+}
+
 // ── SEND: post a new message ──
 if ($action === 'send') {
     $otherId = (int)($input['other_id'] ?? 0);
@@ -189,6 +228,18 @@ if ($action === 'send') {
     }
     if (mb_strlen($text) > 1000) {
         echo json_encode(['success' => false, 'message' => 'Message is too long.']);
+        exit();
+    }
+
+    // Counterpart must exist and have the opposite role
+    $expectedRole = $myRole === 'customer' ? 'repairshop' : 'customer';
+    $vStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+    $vStmt->bind_param("i", $otherId);
+    $vStmt->execute();
+    $vRow = $vStmt->get_result()->fetch_assoc();
+    $vStmt->close();
+    if (!$vRow || $vRow['role'] !== $expectedRole) {
+        echo json_encode(['success' => false, 'message' => 'Recipient not found.']);
         exit();
     }
 

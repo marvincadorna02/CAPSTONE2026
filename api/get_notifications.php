@@ -37,6 +37,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS review_reply_reads (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_reply_read (user_id, review_id)
 )");
+$conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by ENUM('customer','shop') DEFAULT NULL");
 
 // ── Handle mark as read FIRST (before fetching) ──────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -47,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT $userId, b.id, b.status
             FROM bookings b
             WHERE b.customer_id = $userId
-              AND b.status IN ('confirmed','completed','cancelled')
+              AND b.status IN ('confirmed','completed','cancelled','no_show','paid','claimed')
               AND (b.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                    OR b.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))");
 
@@ -84,7 +85,8 @@ $stmt = $conn->prepare("
     FROM bookings b
     LEFT JOIN users u ON u.id = b.shop_id
     WHERE b.customer_id = ?
-      AND b.status IN ('confirmed','completed','cancelled')
+      AND ( b.status IN ('confirmed','completed','no_show','paid','claimed')
+            OR (b.status = 'cancelled' AND b.cancelled_by = 'shop') )
       AND (b.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
            OR b.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY))
     ORDER BY COALESCE(b.updated_at, b.created_at) DESC
@@ -147,6 +149,45 @@ if ($reviewTableCheck && $reviewTableCheck->num_rows > 0) {
         ];
     }
     $stmt2->close();
+}
+
+// ── Fetch unread direct messages from shops ───────────────────
+$msgTableCheck = $conn->query("SHOW TABLES LIKE 'messages'");
+if ($msgTableCheck && $msgTableCheck->num_rows > 0) {
+    $stmt3 = $conn->prepare("
+        SELECT m.shop_id AS other_id,
+               COALESCE(u.shop_name, u.name) AS shop_name,
+               u.logo_url        AS shop_logo,
+               COUNT(*)          AS unread_msgs,
+               MAX(m.created_at) AS last_time
+        FROM messages m
+        LEFT JOIN users u ON u.id = m.shop_id
+        WHERE m.customer_id = ?
+          AND m.sender_role = 'shop'
+          AND m.is_read = 0
+        GROUP BY m.shop_id, shop_name, shop_logo
+        ORDER BY last_time DESC
+        LIMIT 10
+    ");
+    $stmt3->bind_param("i", $userId);
+    $stmt3->execute();
+    $result3 = $stmt3->get_result();
+    while ($row = $result3->fetch_assoc()) {
+        $notifications[] = [
+            'booking_id'   => null,
+            'review_id'    => null,
+            'other_id'     => (int)$row['other_id'],
+            'status'       => 'message',
+            'shop_name'    => $row['shop_name'],
+            'shop_logo'    => $row['shop_logo'],
+            'booking_date' => null,
+            'reply'        => null,
+            'unread'       => (int)$row['unread_msgs'],
+            'is_read'      => false,
+            'time'         => $row['last_time'],
+        ];
+    }
+    $stmt3->close();
 }
 
 // ── Sort by time DESC, limit 20 ───────────────────────────────

@@ -431,6 +431,8 @@ function closeLogoutModal() {
               </div>
             </div>`;
         }).join('');
+        const openId = new URLSearchParams(location.search).get('open');
+        if (openId) document.querySelector(`.thread-item[data-id="${openId}"]`)?.click();
       } catch (err) {
         document.getElementById('threadsCol').innerHTML = '<div class="threads-col-header"><span class="dot"></span> Conversations</div><div class="thread-empty">Could not load conversations.</div>';
       }

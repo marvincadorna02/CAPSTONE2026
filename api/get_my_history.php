@@ -55,7 +55,7 @@ $stmt = $conn->prepare("
     FROM bookings b
     LEFT JOIN users u ON u.id = b.shop_id
     WHERE b.customer_id = ?
-      AND b.status IN ('completed', 'cancelled')
+      AND b.status IN ('completed', 'paid', 'claimed', 'cancelled', 'no_show')
     ORDER BY b.created_at DESC
 ");
 $stmt->bind_param("ii", $userId, $userId);

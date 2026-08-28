@@ -681,14 +681,14 @@ async function loadNotifications() {
         ? new Date(n.time).toLocaleDateString('en-PH', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
         : '';
       const bg      = n.is_read ? '' : 'background:#fffbeb;';
-      const dest    = n.type === 'review' ? 'shop-reviews.php' : n.type === 'subscription' ? 'shop-subscription.php' : 'shop-bookings.php';
+      const dest    = n.type === 'message' ? ('shop-messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : n.type === 'review' ? 'shop-reviews.php' : n.type === 'subscription' ? 'shop-subscription.php' : 'shop-bookings.php';
       const avatarBg = AVATAR_BG[n.status] || '94a3b8';
       const displayName = n.type === 'subscription' ? 'Subscription' : (n.customer_name ||  'Customer');
       const avatarUrl = n.customer_picture 
   ? n.customer_picture 
   : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=${avatarBg}&color=fff&size=80`;
 
-      const msgText = n.type === 'subscription'
+      const msgText = n.type === 'message' ? 'Sent you a message 💬' : n.type === 'subscription'
   ? (n.status === 'active'
       ? `Your ${n.plan_name || ''} subscription was approved ✅`
       : `Your ${n.plan_name || ''} subscription was declined`)

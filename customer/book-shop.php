@@ -502,7 +502,7 @@ $servicesJson = json_encode($services);
         <div class="user-profile">
           <img src="<?php echo $avatarUrl; ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar" />
           <div class="user-info">
-            <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
+            <span class="user-name" data-acct-name><?php echo htmlspecialchars($userName); ?></span>
             <span class="user-role">Customer</span>
           </div>
         </div>
@@ -997,14 +997,19 @@ async function loadNotifications() {
     const STATUS_MSG = {
       confirmed: (shop) => `<span>${shop}</span> confirmed your booking! 🎉`,
       completed: (shop) => `Your repair at <span>${shop}</span> is complete! ✅`,
+      paid:      (shop) => `Payment confirmed by <span>${shop}</span>. Ready for pickup! 💰`,
+      claimed:   (shop) => `You claimed your device from <span>${shop}</span>! 🎉`,
+      no_show:   (shop) => `<span>${shop}</span> marked your booking as no-show.`,
       cancelled: (shop) => `<span>${shop}</span> cancelled your booking.`,
       review_reply: (shop, reply) => `<span style="font-weight:800;color:#d97706;">${shop}:</span> ${reply}`,
+      message:   (shop) => `<span style="font-weight:800;color:#d97706;">${shop}</span> sent you a message 💬`,
     };
     list.innerHTML = data.notifications.map(n => {
       const logo = n.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
       const msg = STATUS_MSG[n.status] ? STATUS_MSG[n.status](n.shop_name||'Shop', n.reply||'') : `<span>${n.shop_name||'Shop'}:</span> ${n.reply||n.status}`;
       const time = n.time ? new Date(n.time).toLocaleDateString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-      return `<div class="notif-item ${n.is_read?'':'unread'}" onclick="window.location.href='my-bookings.php'">
+      const dest = n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : 'my-bookings.php';
+      return `<div class="notif-item ${n.is_read?'':'unread'}" onclick="window.location.href='${dest}'">
         <img src="${logo}" class="notif-logo" alt="" onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=f59e0b&color=fff&size=80'" />
         <div class="notif-content">
           <div class="notif-message">${msg}</div>

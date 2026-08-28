@@ -1,5 +1,7 @@
 <?php
 session_start();
+header('Content-Type: application/json');
+mysqli_report(MYSQLI_REPORT_OFF); // return errors as JSON, never as an HTML fatal
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'error'=>'Not logged in']); exit(); }
 
 $input  = json_decode(file_get_contents('php://input'), true);
@@ -40,9 +42,24 @@ if ($conn->connect_error) {
     echo json_encode(['success'=>false,'error'=>'DB connection failed']); exit();
 }
 
+// ── Reject payloads bigger than the MySQL packet limit ──
+$limitRow  = $conn->query("SELECT @@max_allowed_packet AS p");
+$maxPacket = $limitRow ? (int)$limitRow->fetch_assoc()['p'] : 1048576;
+if (strlen($base64) > $maxPacket - 8192) {
+    $conn->close();
+    echo json_encode(['success'=>false,'error'=>'Image too large for the server. Please pick a smaller photo.']);
+    exit();
+}
+
 $stmt = $conn->prepare("UPDATE users SET profile_picture = ? WHERE id = ?");
 $stmt->bind_param("si", $base64, $_SESSION['user_id']);
-$stmt->execute();
+if (!$stmt->execute()) {
+    $err = $stmt->error;
+    $stmt->close(); $conn->close();
+    echo json_encode(['success'=>false,'error'=>'Could not save image: ' . $err]);
+    exit();
+}
+$stmt->close();
 $conn->close();
 
 echo json_encode(['success' => true]);

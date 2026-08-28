@@ -37,7 +37,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS reviews (
 )");
 
 // Verify booking belongs to this customer, is for this shop, and is completed
-$verify = $conn->prepare("SELECT id FROM bookings WHERE id = ? AND customer_id = ? AND shop_id = ? AND status = 'completed'");
+$verify = $conn->prepare("SELECT id FROM bookings WHERE id = ? AND customer_id = ? AND shop_id = ? AND status IN ('completed','paid','claimed')");
 $verify->bind_param("iii", $bookingId, $userId, $shopId);
 $verify->execute();
 if (!$verify->get_result()->fetch_assoc()) {

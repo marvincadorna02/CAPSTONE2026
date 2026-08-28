@@ -580,8 +580,10 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
         blue:   `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#3b82f6"/><polyline points="7,12 10.5,15.5 17,9" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`,
         violet: `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#8b5cf6"/><path d="M12 7l1.5 3.2 3.5.4-2.6 2.4.7 3.5L12 15.3 8.9 16.9l.7-3.5L7 11l3.5-.4z" fill="white"/></svg>`,
         teal:   `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#14b8a6"/><rect x="7" y="9" width="10" height="7" rx="1.5" fill="white"/><rect x="7" y="10.5" width="10" height="1.6" fill="#14b8a6"/></svg>`,
+        chat:   `<svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#6366f1"/><path d="M7 9.5h10v5H12l-3 2.5v-2.5H7z" fill="white"/></svg>`,
       };
       function mapActivity(n) {
+        if (n.type === 'message')      return { label:'New Message', icon:ICON.chat, dest:'shop-messages.php' + (n.other_id ? '?open=' + n.other_id : ''), name:n.customer_name || 'Customer' };
         if (n.type === 'review')       return { label:'New Review', icon:ICON.violet, dest:'shop-reviews.php', name:n.customer_name || 'Customer' };
         if (n.type === 'subscription') return { label:'Subscription ' + (n.status==='active'?'Approved':'Update'), icon:ICON.teal, dest:'shop-subscription.php', name:n.plan_name || 'Subscription' };
         if (n.type === 'reschedule')   return { label:'Booking Rescheduled', icon:ICON.amber, dest:'shop-bookings.php', name:n.customer_name || 'Customer' };

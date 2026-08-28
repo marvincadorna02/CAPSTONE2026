@@ -54,8 +54,10 @@ if (!isset($transitions[$current]) || !in_array($newStatus, $transitions[$curren
     echo json_encode(['error' => "Invalid status change from '{$current}' to '{$newStatus}'."]); exit();
 }
 
-$stmt = $conn->prepare("UPDATE bookings SET status = ? WHERE id = ? AND shop_id = ?");
-$stmt->bind_param("sii", $newStatus, $bookingId, $shopId);
+$conn->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by ENUM('customer','shop') DEFAULT NULL");
+
+$stmt = $conn->prepare("UPDATE bookings SET status = ?, cancelled_by = IF(? = 'cancelled','shop',cancelled_by) WHERE id = ? AND shop_id = ?");
+$stmt->bind_param("ssii", $newStatus, $newStatus, $bookingId, $shopId);
 $stmt->execute();
 
 if ($stmt->affected_rows > 0) {

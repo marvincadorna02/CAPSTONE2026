@@ -727,7 +727,7 @@ body.sidebar-open .sidebar-backdrop {
             <div class="user-profile" onclick="openProfileModal()" style="cursor:pointer;">
               <img src="<?php echo $avatarUrl; ?>" alt="<?php echo htmlspecialchars($userName); ?>" class="user-avatar" />
               <div class="user-info">
-                <span class="user-name"><?php echo htmlspecialchars($userName); ?></span>
+                <span class="user-name" data-acct-name><?php echo htmlspecialchars($userName); ?></span>
                 <span class="user-role">Customer</span>
               </div>
             </div>
@@ -833,7 +833,9 @@ body.sidebar-open .sidebar-backdrop {
           const empty = document.getElementById('emptyState');
 
           const filtered = currentFilter === 'all'
-            ? allBookings
+            ? [...allBookings].sort((a, b) =>
+                new Date(b.created_at || `${b.booking_date} ${b.booking_time}`) -
+                new Date(a.created_at || `${a.booking_date} ${a.booking_time}`))
             : allBookings.filter(b => b.status === currentFilter);
 
           if (!filtered.length) {
@@ -1228,8 +1230,12 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
             const STATUS_MSG = {
               confirmed:    (shop)         => `<span>${shop}</span> confirmed your booking! 🎉`,
               completed:    (shop)         => `Your repair at <span>${shop}</span> is complete! ✅`,
+              paid:         (shop)         => `Payment confirmed by <span>${shop}</span>. Ready for pickup! 💰`,
+              claimed:      (shop)         => `You claimed your device from <span>${shop}</span>! 🎉`,
+              no_show:      (shop)         => `<span>${shop}</span> marked your booking as no-show.`,
               cancelled:    (shop)         => `<span>${shop}</span> cancelled your booking.`,
               review_reply: (shop, reply)  => `<span style="font-weight:800;color:#d97706;">${shop}:</span> ${reply}`,
+              message:      (shop)         => `<span style="font-weight:800;color:#d97706;">${shop}</span> sent you a message 💬`,
             };
             list.innerHTML = data.notifications.map(n => {
               const logo = n.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
@@ -1237,8 +1243,9 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
                 ? STATUS_MSG[n.status](n.shop_name || 'Shop', n.reply || '')
                 : `<span>${n.shop_name || 'Shop'}:</span> ${n.reply || n.status}`;
               const time = n.time ? new Date(n.time).toLocaleDateString('en-PH', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
+              const dest = n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : 'my-bookings.php';
               return `
-                <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="window.location.href='my-bookings.php'">
+                <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="window.location.href='${dest}'">
                   <img src="${logo}" class="notif-logo" alt=""
                     onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=f59e0b&color=fff&size=80'" />
                   <div class="notif-content">
@@ -1287,6 +1294,23 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 
+// Live copy of the name so edits reflect without a reload
+let CURRENT_NAME = <?php echo json_encode($userName); ?>;
+function applyName(name) {
+  CURRENT_NAME = name;
+  document.querySelectorAll('[data-acct-name]').forEach(el => el.textContent = name);
+  document.querySelectorAll('img.user-avatar').forEach(img => {
+    img.alt = name;
+    if (img.src.includes('ui-avatars.com'))
+      img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=2563eb&color=fff`;
+  });
+  const initials = document.getElementById('profileInitials');
+  if (initials && !initials.querySelector('img'))
+    initials.textContent = name.trim().slice(0, 2).toUpperCase();
+  const bookNameInput = document.getElementById('customerName');
+  if (bookNameInput) bookNameInput.value = name;
+}
+
 function openProfileModal() {
   const serverPic = <?php echo json_encode($userProfilePic); ?>;
   const saved = serverPic || localStorage.getItem('profilePic_<?php echo $userId; ?>');
@@ -1294,10 +1318,10 @@ function openProfileModal() {
   if (saved) {
     avatarEl.innerHTML = `<img src="${saved}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" />`;
   } else {
-    avatarEl.textContent = '<?php echo strtoupper(substr($userName, 0, 2)); ?>';
+    avatarEl.textContent = CURRENT_NAME.trim().slice(0, 2).toUpperCase();
     avatarEl.style.background = 'linear-gradient(135deg,#ff6b35,#ef4444)';
   }
-  document.getElementById('profileName').textContent = '<?php echo htmlspecialchars($userName); ?>';
+  document.getElementById('profileName').textContent = CURRENT_NAME;
   document.getElementById('profileModal').classList.add('visible');
 }
 function closeProfileModal() {
@@ -1316,34 +1340,63 @@ document.getElementById('profileModal').addEventListener('click', function(e) {
   window.openAccountModal = function(){ document.getElementById('acctName').value=INIT.name||''; document.getElementById('acctEmail').value=INIT.email||''; document.getElementById('acctContact').value=INIT.contact||''; document.getElementById('acctCurrent').value=''; document.getElementById('acctNew').value=''; document.getElementById('acctConfirm').value=''; acctMsg('acctProfileMsg',''); acctMsg('acctPassMsg',''); acctSwitch('profile'); document.getElementById('accountModal').classList.add('visible'); };
   window.closeAccountModal = function(){ document.getElementById('accountModal').classList.remove('visible'); };
   async function post(payload){ const res=await fetch('../api/update_account.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({csrf_token:CSRF},payload))}); return res.json(); }
-  window.saveProfile = async function(e){ e.preventDefault(); const btn=e.target.querySelector('.acct-submit'); btn.disabled=true; try{ const d=await post({action:'update_profile',name:document.getElementById('acctName').value.trim(),email:document.getElementById('acctEmail').value.trim(),contact_number:document.getElementById('acctContact').value.trim()}); acctMsg('acctProfileMsg',d.message||d.error,!!d.success); if(d.success){INIT.name=d.name;INIT.email=d.email;document.querySelectorAll('[data-acct-name]').forEach(el=>el.textContent=d.name);} }catch(err){ acctMsg('acctProfileMsg','Network error. Try again.',false); } btn.disabled=false; return false; };
+  window.saveProfile = async function(e){ e.preventDefault(); const btn=e.target.querySelector('.acct-submit'); btn.disabled=true; try{ const d=await post({action:'update_profile',name:document.getElementById('acctName').value.trim(),email:document.getElementById('acctEmail').value.trim(),contact_number:document.getElementById('acctContact').value.trim()}); acctMsg('acctProfileMsg',d.message||d.error,!!d.success); if(d.success){INIT.name=d.name;INIT.email=d.email;applyName(d.name);} }catch(err){ acctMsg('acctProfileMsg','Network error. Try again.',false); } btn.disabled=false; return false; };
   window.savePassword = async function(e){ e.preventDefault(); const btn=e.target.querySelector('.acct-submit'); btn.disabled=true; try{ const d=await post({action:'change_password',current_password:document.getElementById('acctCurrent').value,new_password:document.getElementById('acctNew').value,confirm_password:document.getElementById('acctConfirm').value}); acctMsg('acctPassMsg',d.message||d.error,!!d.success); if(d.success){document.getElementById('acctCurrent').value='';document.getElementById('acctNew').value='';document.getElementById('acctConfirm').value='';} }catch(err){ acctMsg('acctPassMsg','Network error. Try again.',false); } btn.disabled=false; return false; };
   const ov=document.getElementById('accountModal'); if(ov) ov.addEventListener('click',function(e){ if(e.target===this) closeAccountModal(); });
 })();
-function handlePicUpload(event) {
+// Shrink the photo in the browser first — a raw 2MB base64 blob blows past
+// MySQL's default 1MB max_allowed_packet and the save silently fails.
+function compressImage(file, maxSize = 480, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('That file is not a valid image.'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePicUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) { showPicStatus('Image too large. Max 2MB.', false); return; }
-  const reader = new FileReader();
-  reader.onload = async function(e) {
-    const base64 = e.target.result;
-    document.getElementById('profileInitials').innerHTML =
-      `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" />`;
-    localStorage.setItem('profilePic_<?php echo $userId; ?>', base64);
-    const topAvatar = document.querySelector('.user-avatar');
-    if (topAvatar) topAvatar.src = base64;
-    showPicStatus('Uploading...', null);
-    try {
-      const res  = await fetch('../api/update_profile_picture.php', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ image: base64 })
-      });
-      const data = await res.json();
-      if (data.success) showPicStatus('✓ Profile picture updated!', true);
-      else showPicStatus('❌ ' + (data.error || 'Upload failed.'), false);
-    } catch(err) { showPicStatus('❌ Network error. Saved locally.', false); }
-  };
-  reader.readAsDataURL(file);
+  if (!/^image\//.test(file.type)) { showPicStatus('Please pick an image file.', false); return; }
+  if (file.size > 8 * 1024 * 1024) { showPicStatus('Image too large. Max 8MB.', false); return; }
+
+  showPicStatus('Uploading...', null);
+
+  let base64;
+  try { base64 = await compressImage(file); }
+  catch (err) { showPicStatus('❌ ' + err.message, false); return; }
+
+  document.getElementById('profileInitials').innerHTML =
+    `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:14px;" />`;
+  const topAvatar = document.querySelector('.user-avatar');
+  if (topAvatar) topAvatar.src = base64;
+  try { localStorage.setItem('profilePic_<?php echo $userId; ?>', base64); } catch (e) {}
+
+  try {
+    const res  = await fetch('../api/update_profile_picture.php', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ image: base64 })
+    });
+    const raw = await res.text();
+    let data;
+    try { data = JSON.parse(raw); }
+    catch (e) { showPicStatus('❌ Server error: ' + raw.replace(/<[^>]*>/g,' ').trim().slice(0,120), false); return; }
+    if (data.success) showPicStatus('✓ Profile picture updated!', true);
+    else showPicStatus('❌ ' + (data.error || 'Upload failed.'), false);
+  } catch (err) { showPicStatus('❌ Network error. Not saved on the server.', false); }
 }
 function showPicStatus(msg, ok) {
   const el = document.getElementById('picStatus');
