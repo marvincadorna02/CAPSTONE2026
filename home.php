@@ -129,14 +129,28 @@ body{font-family:'Outfit',-apple-system,sans-serif;background:#fff;color:var(--t
 .nav-profile-caret{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(255,255,255,0.7);margin-left:2px;transition:transform 0.25s;flex-shrink:0;}
 .nav-profile-wrap{position:relative;}
 .nav-profile-wrap.open .nav-profile-caret{transform:rotate(180deg);}
-.nav-profile-menu{position:absolute;top:calc(100% + 10px);right:0;min-width:210px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,0.18);padding:6px;opacity:0;visibility:hidden;transform:translateY(-8px);transition:all 0.2s;z-index:200;}
+.nav-profile-menu{
+  position:absolute;top:calc(100% + 10px);right:0;min-width:210px;
+  background:#0f172a;
+  border:1px solid rgba(245,158,11,0.2);
+  border-radius:14px;
+  box-shadow:0 16px 40px rgba(0,0,0,0.4);
+  padding:6px;
+  opacity:0;visibility:hidden;transform:translateY(-8px);
+  transition:all 0.2s;z-index:200;
+}
 .nav-profile-wrap.open .nav-profile-menu{opacity:1;visibility:visible;transform:translateY(0);}
-.nav-profile-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;color:#0f172a;font-size:13.5px;font-weight:600;text-decoration:none;transition:background 0.15s;white-space:nowrap;}
-.nav-profile-item:hover{background:var(--accent-faint,#fff7ed);color:var(--accent-dark);}
-.nav-profile-item img{width:17px;height:17px;opacity:0.7;flex-shrink:0;}
-.nav-profile-item.danger{color:#dc2626;}
-.nav-profile-item.danger:hover{background:#fef2f2;color:#dc2626;}
-.nav-profile-divider{height:1px;background:#eef2f6;margin:5px 4px;}
+.nav-profile-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;
+  color:rgba(255,255,255,0.85);
+  font-size:13.5px;font-weight:600;text-decoration:none;
+  transition:background 0.15s;white-space:nowrap;
+}
+.nav-profile-item:hover{background:rgba(245,158,11,0.12);color:var(--accent-light);}
+.nav-profile-item img{width:17px;height:17px;opacity:0.7;flex-shrink:0;filter:brightness(0) invert(1);}
+.nav-profile-item.danger{color:#f87171;}
+.nav-profile-item.danger:hover{background:rgba(220,38,38,0.15);color:#f87171;}
+.nav-profile-divider{height:1px;background:rgba(255,255,255,0.08);margin:5px 4px;}
 @media(max-width:768px){.nav-profile-name{display:none;}.nav-profile{padding:4px;}}
 
 /* ── HERO ── */
