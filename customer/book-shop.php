@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -1008,7 +1009,7 @@ async function loadNotifications() {
       const logo = n.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
       const msg = STATUS_MSG[n.status] ? STATUS_MSG[n.status](n.shop_name||'Shop', n.reply||'') : `<span>${n.shop_name||'Shop'}:</span> ${n.reply||n.status}`;
       const time = n.time ? new Date(n.time).toLocaleDateString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
-      const dest = n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : 'my-bookings.php';
+      const dest = n.link ? ('../' + n.link) : n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : 'my-bookings.php';
       return `<div class="notif-item ${n.is_read?'':'unread'}" onclick="window.location.href='${dest}'">
         <img src="${logo}" class="notif-logo" alt="" onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=f59e0b&color=fff&size=80'" />
         <div class="notif-content">

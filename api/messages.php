@@ -8,6 +8,7 @@
 //   { action: 'contacts', q: '...' }             -> (shop only) customers the shop can start a new chat with
 
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -704,7 +705,7 @@ list.innerHTML = data.notifications.map(n => {
     ? STATUS_MSG[n.status](n.shop_name || 'Shop', n.reply || '')
     : `<span>${n.shop_name || 'Shop'}:</span> ${n.reply || n.status}`;
   const time = n.time ? new Date(n.time).toLocaleDateString('en-PH', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) : '';
-  const dest = n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : n.status === 'review_reply' ? 'history.php' : 'my-bookings.php';
+  const dest = n.link ? ('../' + n.link) : n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : n.status === 'review_reply' ? 'history.php' : 'my-bookings.php';
 
   const replyHtml = (n.reply && n.status !== 'review_reply' && n.status !== 'message')
     ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbeb;border-left:3px solid #f59e0b;border-radius:0 6px 6px 0;font-size:.73rem;color:#374151;line-height:1.4;">

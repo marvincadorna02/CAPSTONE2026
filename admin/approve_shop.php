@@ -1,5 +1,7 @@
 <?php
 session_start();
+define('FIXIT_GUARD_JSON', true);
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;

@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -576,6 +577,10 @@ body.sidebar-open .sidebar-backdrop {
           <a href="admin-subscriptions.php" class="nav-item">
   <span class="nav-icon"><img src="../assets/icons/approve.svg" alt="Subscriptions" /></span>
   <span class="nav-text">Subscriptions</span>
+</a>
+<a href="admin-settings.php" class="nav-item">
+  <span class="nav-icon"><img src="../assets/icons/tools.svg" alt="System Settings" /></span>
+  <span class="nav-text">System Settings</span>
 </a>
 <a href="../developers.php" class="nav-item">
   <span class="nav-icon"><img src="../assets/icons/developers.svg" alt="Developers" /></span>

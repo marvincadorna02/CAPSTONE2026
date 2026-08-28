@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -319,6 +320,7 @@ body.sidebar-open .sidebar-backdrop {
   <span class="nav-icon"><img src="../assets/icons/approve.svg" alt="Subscriptions" /></span>
   <span class="nav-text">Subscriptions</span>
 </a>
+          <a href="admin-settings.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/tools.svg" alt="System Settings" /></span><span class="nav-text">System Settings</span></a>
           <a href="../developers.php" class="nav-item"><span class="nav-icon"><img src="../assets/icons/developers.svg" alt="Developers" /></span><span class="nav-text">Developers</span></a>
         </div>
       </nav>

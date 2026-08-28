@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -62,6 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   AND r.reply IS NOT NULL AND r.reply != ''
                   AND r.replied_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         }
+
+        // Mark system notifications read
+        $nStmt = fixit_p($conn, "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
+        if ($nStmt) { $nStmt->bind_param("i", $userId); fixit_x($nStmt); $nStmt->close(); }
 
         echo json_encode(['success' => true]);
         $conn->close(); exit();
@@ -188,6 +193,42 @@ if ($msgTableCheck && $msgTableCheck->num_rows > 0) {
         ];
     }
     $stmt3->close();
+}
+
+// ── Fetch system notifications (auto-cancels, restrictions, announcements) ──
+// These live in a real table because they don't map onto a booking/review row.
+$sysStmt = fixit_p($conn, "
+    SELECT id, type, title, body, link, ref_id, is_read, created_at
+    FROM notifications
+    WHERE user_id = ?
+      AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ORDER BY created_at DESC
+    LIMIT 15
+");
+if ($sysStmt) {
+    $sysStmt->bind_param("i", $userId);
+    if (fixit_x($sysStmt)) {
+        $sysRes = $sysStmt->get_result();
+        while ($row = $sysRes->fetch_assoc()) {
+            $notifications[] = [
+                'booking_id'   => null,
+                'review_id'    => null,
+                'notif_id'     => (int)$row['id'],
+                // The bells fall back to "shop_name: reply" for unknown statuses,
+                // so the title/body land in the right slots with no JS change.
+                'status'       => 'system',
+                'sys_type'     => $row['type'],
+                'shop_name'    => $row['title'],
+                'shop_logo'    => null,
+                'booking_date' => null,
+                'reply'        => $row['body'],
+                'link'         => $row['link'],
+                'is_read'      => (bool)$row['is_read'],
+                'time'         => $row['created_at'],
+            ];
+        }
+    }
+    $sysStmt->close();
 }
 
 // ── Sort by time DESC, limit 20 ───────────────────────────────

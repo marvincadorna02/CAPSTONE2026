@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 $timeout = 1800;
 if (isset($_SESSION['last_activity']) &&

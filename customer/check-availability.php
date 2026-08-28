@@ -1,5 +1,7 @@
 <?php
 session_start();
+define('FIXIT_GUARD_JSON', true);
+require_once __DIR__ . '/../includes/guard.php';
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {

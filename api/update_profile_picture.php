@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 header('Content-Type: application/json');
 mysqli_report(MYSQLI_REPORT_OFF); // return errors as JSON, never as an HTML fatal
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'error'=>'Not logged in']); exit(); }

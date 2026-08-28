@@ -1,6 +1,7 @@
 <?php
 // ── Shop-owner analytics stats (own bookings/revenue/ratings) ──
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 $timeout = 1800;
 if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {

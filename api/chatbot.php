@@ -4,6 +4,7 @@
 // Reuses the same Groq API key/pattern as ai_suggest.php.
 
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;

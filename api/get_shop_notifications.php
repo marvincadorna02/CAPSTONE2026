@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 // ── Session timeout (30 mins) ──
 $timeout = 1800;
@@ -85,6 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE ss.shop_id = $userId
               AND ss.status IN ('active','rejected')
               AND ss.updated_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        $nStmt = fixit_p($conn, "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
+        if ($nStmt) { $nStmt->bind_param("i", $userId); fixit_x($nStmt); $nStmt->close(); }
         echo json_encode(['success' => true]);
         $conn->close(); exit();
     }
@@ -288,6 +291,40 @@ if ($msgTableCheck && $msgTableCheck->num_rows > 0) {
         ];
     }
     $stmt5->close();
+}
+
+// ── 6. System notifications (subscription reminders, auto-expired bookings) ──
+// Real rows, because these events don't map onto a booking/review/subscription row.
+$sysStmt = fixit_p($conn, "
+    SELECT id, type, title, body, link, ref_id, is_read, created_at
+    FROM notifications
+    WHERE user_id = ?
+      AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    ORDER BY created_at DESC
+    LIMIT 15
+");
+if ($sysStmt) {
+    $sysStmt->bind_param("i", $userId);
+    if (fixit_x($sysStmt)) {
+        $sysRes = $sysStmt->get_result();
+        while ($row = $sysRes->fetch_assoc()) {
+            $notifications[] = [
+                'type'             => 'system',
+                'status'           => 'system',
+                'notif_id'         => (int)$row['id'],
+                'sys_type'         => $row['type'],
+                'sys_title'        => $row['title'],
+                'sys_body'         => $row['body'],
+                'customer_name'    => $row['title'],
+                'customer_picture' => null,
+                'service_name'     => null,
+                'link'             => $row['link'],
+                'is_read'          => (bool)$row['is_read'],
+                'time'             => $row['created_at'],
+            ];
+        }
+    }
+    $sysStmt->close();
 }
 
 // ── Sort all by time DESC (newest first) ──────────────────────

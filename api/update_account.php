@@ -2,6 +2,7 @@
 // ── Shared account endpoint: change password + edit profile ──
 // Session-authed (any logged-in user), CSRF-checked, JSON in/out.
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {

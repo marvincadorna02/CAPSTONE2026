@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Pragma: no-cache");
@@ -586,6 +587,7 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
         if (n.type === 'message')      return { label:'New Message', icon:ICON.chat, dest:'shop-messages.php' + (n.other_id ? '?open=' + n.other_id : ''), name:n.customer_name || 'Customer' };
         if (n.type === 'review')       return { label:'New Review', icon:ICON.violet, dest:'shop-reviews.php', name:n.customer_name || 'Customer' };
         if (n.type === 'subscription') return { label:'Subscription ' + (n.status==='active'?'Approved':'Update'), icon:ICON.teal, dest:'shop-subscription.php', name:n.plan_name || 'Subscription' };
+        if (n.type === 'system')       return { label:n.sys_title || 'System Notice', icon:ICON.amber, dest:(n.link ? '../' + n.link : 'shop-dashboard.php'), name:n.sys_body || '' };
         if (n.type === 'reschedule')   return { label:'Booking Rescheduled', icon:ICON.amber, dest:'shop-bookings.php', name:n.customer_name || 'Customer' };
         const m = {
           pending:   { label:'New Booking',        icon:ICON.amber },

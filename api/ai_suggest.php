@@ -4,6 +4,7 @@
     // Groq API endpoint for auto-suggesting repair services
 
     session_start();
+require_once __DIR__ . '/../includes/guard.php';
 
     // ── Session timeout (30 mins) ──
 $timeout = 1800;
