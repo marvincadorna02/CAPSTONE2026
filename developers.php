@@ -284,9 +284,13 @@ body.sidebar-open .sidebar-backdrop {
           <a href="admin/admin-shops.php" class="nav-item"><span class="nav-icon"><img src="assets/icons/shop.svg" alt="All Repair Shops" /></span><span class="nav-text">All Repair Shops</span></a>
           <a href="admin/admin-users.php" class="nav-item"><span class="nav-icon"><img src="assets/icons/users.svg" alt="Users" /></span><span class="nav-text">Users</span></a>
            <a href="admin/admin-subscriptions.php" class="nav-item">
-  <span class="nav-icon"><img src="assets/icons/approve.svg" alt="Subscriptions" /></span>
-  <span class="nav-text">Subscriptions</span>
-</a>
+          <span class="nav-icon"><img src="assets/icons/approve.svg" alt="Subscriptions" /></span>
+          <span class="nav-text">Subscriptions</span>
+        </a>
+        <a href="admin/admin-settings.php" class="nav-item">
+          <span class="nav-icon"><img src="assets/icons/tools.svg" alt="System Settings" /></span>
+          <span class="nav-text">System Settings</span>
+        </a>
           <a href="developers.php" class="nav-item active"><span class="nav-icon"><img src="assets/icons/developers.svg" alt="Developers" /></span><span class="nav-text">Developers</span></a>
         </div>
       </nav>

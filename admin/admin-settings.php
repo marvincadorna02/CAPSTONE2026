@@ -134,6 +134,14 @@ $counts = $conn->query("SELECT
   <link rel="stylesheet" href="../assets/css/dashboard.css" />
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <style>
+
+    .main-content {
+  animation: fadeIn .45s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
     .set-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
     @media (max-width: 1000px) { .set-grid { grid-template-columns:1fr; } }
 
