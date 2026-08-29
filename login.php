@@ -73,13 +73,19 @@ function clearLoginAttempts($conn, $email, $ip, $loginType) {
     $stmt->execute();
 }
 
+// ── FIX: added the same time-window filter used in getLoginAttempts().
+// Before, this query grabbed the oldest 5 attempts EVER recorded for the
+// email/type (no time bound), so if someone had old failed attempts from
+// way back, the lockout countdown could balloon to hours instead of the
+// intended LOCKOUT_MINUTES (this is why it showed "239m" earlier).
 function getLockoutSecondsLeft($conn, $email, $ip, $loginType) {
+    $window = date('Y-m-d H:i:s', strtotime('-' . LOCKOUT_MINUTES . ' minutes'));
     $stmt = $conn->prepare(
         "SELECT attempted_at FROM login_attempts
-         WHERE email = ? AND login_type = ?
+         WHERE email = ? AND login_type = ? AND attempted_at > ?
          ORDER BY attempted_at ASC LIMIT " . MAX_ATTEMPTS
     );
-    $stmt->bind_param("ss", $email, $loginType);
+    $stmt->bind_param("sss", $email, $loginType, $window);
     $stmt->execute();
     $result = $stmt->get_result();
     $rows = $result->fetch_all(MYSQLI_ASSOC);
@@ -899,7 +905,7 @@ $conn->close();
 
       document.getElementById("loginForm").addEventListener("submit", function (e) {
         const role = document.querySelector('input[name="userType"]:checked')?.value;
-        // In admin step 1, Enter/submit should just advance, not post.
+
         if (role === "admin" && !adminVerified) {
           e.preventDefault();
           tryAdminContinue();
