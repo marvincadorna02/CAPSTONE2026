@@ -82,20 +82,51 @@ $userName = $_SESSION['name'];
       background: linear-gradient(180deg, #0d1117 0%, #141c2e 100%);
       border: 1px solid rgba(245,158,11,0.15);
       border-radius: 18px;
-      overflow-y: auto;
+      display: flex; flex-direction: column; overflow: hidden;
       box-shadow: 0 12px 32px rgba(13,17,23,0.18), inset 0 1px 0 rgba(255,255,255,0.04);
     }
+    .threads-list { flex: 1; overflow-y: auto; }
     .threads-col-header {
       padding: 16px 18px 12px;
       font-size: .78rem; font-weight: 800; letter-spacing: .4px;
       color: #f1f5f9; text-transform: uppercase;
       border-bottom: 1px solid rgba(255,255,255,0.06);
       display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
     }
     .threads-col-header .dot {
       width: 7px; height: 7px; border-radius: 50%;
       background: #10b981; box-shadow: 0 0 8px rgba(16,185,129,0.7);
     }
+    .new-msg-btn {
+      margin-left: auto; border: none; cursor: pointer;
+      background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff;
+      font-family: "Outfit", sans-serif; font-size: .68rem; font-weight: 800;
+      letter-spacing: .3px; padding: 6px 11px; border-radius: 9px;
+      box-shadow: 0 2px 8px rgba(245,158,11,0.4); transition: transform .15s ease;
+    }
+    .new-msg-btn:hover { transform: translateY(-1px); }
+
+    /* ── New message modal ── */
+    .contact-search {
+      width: 100%; border: 1.5px solid #e2e8f0; border-radius: 12px;
+      padding: 10px 14px; font-size: .85rem; font-family: "Outfit", sans-serif;
+      outline: none; margin-bottom: 12px;
+    }
+    .contact-search:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+    .contact-list { max-height: 320px; overflow-y: auto; text-align: left; }
+    .contact-item {
+      display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+      border-radius: 12px; cursor: pointer; transition: background .15s ease;
+    }
+    .contact-item:hover { background: #f8fafc; }
+    .contact-item img {
+      width: 38px; height: 38px; border-radius: 10px; object-fit: cover;
+      flex-shrink: 0; background: #eef2f6;
+    }
+    .contact-name { font-size: .85rem; font-weight: 700; color: #0f172a; }
+    .contact-sub  { font-size: .72rem; color: #94a3b8; margin-top: 2px; }
+    .contact-empty { text-align: center; color: #94a3b8; font-size: .82rem; padding: 24px 12px; }
 
     .thread-item {
       display: flex; gap: 12px; padding: 13px 16px;
@@ -314,6 +345,19 @@ $userName = $_SESSION['name'];
   </div>
   </aside>
 
+  <!-- New Message Modal -->
+  <div class="modal-overlay" id="newMsgModal">
+    <div class="modal-box" style="max-width:420px;">
+      <div class="modal-title">New Message</div>
+      <div class="modal-subtitle" style="margin-bottom:16px;">Pick a repair shop to start a conversation.</div>
+      <input type="text" id="contactSearch" class="contact-search" placeholder="Search shop name..." />
+      <div class="contact-list" id="contactList"><div class="contact-empty">Loading…</div></div>
+      <div class="modal-actions">
+        <button class="modal-btn-cancel" onclick="closeNewMsgModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
   <main class="main-content">
     <header class="top-bar">
       <div class="page-header">
@@ -326,8 +370,13 @@ $userName = $_SESSION['name'];
     <div class="dashboard-content">
       <div class="msgs-layout">
         <div class="threads-col" id="threadsCol">
-          <div class="threads-col-header"><span class="dot"></span> Conversations</div>
-          <div class="thread-empty">Loading conversations…</div>
+          <div class="threads-col-header">
+            <span class="dot"></span> Conversations
+            <button class="new-msg-btn" onclick="openNewMsgModal()">+ New</button>
+          </div>
+          <div class="threads-list" id="threadsList">
+            <div class="thread-empty">Loading conversations…</div>
+          </div>
         </div>
         <div class="chat-col">
           <div class="chat-header" id="chatHeader">Select a conversation</div>
@@ -413,13 +462,12 @@ function closeLogoutModal() {
           body: JSON.stringify({ action: 'list' })
         });
         const data = await res.json();
-        const col = document.getElementById('threadsCol');
-        const headerHtml = '<div class="threads-col-header"><span class="dot"></span> Conversations</div>';
+        const col = document.getElementById('threadsList');
         if (!data.success || !data.threads.length) {
-          col.innerHTML = headerHtml + '<div class="thread-empty">No conversations yet.<br><small>Customers can message you from your shop page.</small></div>';
+          col.innerHTML = '<div class="thread-empty">No conversations yet.<br><small>Tap <b>+ New</b> to message a repair shop.</small></div>';
           return;
         }
-        col.innerHTML = headerHtml + data.threads.map(t => {
+        col.innerHTML = data.threads.map(t => {
           const avatar = t.other_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(t.other_name)}&background=2563eb&color=fff&size=80`;
           const badge = t.unread_count > 0 ? `<span class="thread-badge">${t.unread_count}</span>` : '';
           const isActive = String(t.other_id) === String(activeOtherId) ? ' active' : '';
@@ -435,9 +483,68 @@ function closeLogoutModal() {
         const openId = new URLSearchParams(location.search).get('open');
         if (openId) document.querySelector(`.thread-item[data-id="${openId}"]`)?.click();
       } catch (err) {
-        document.getElementById('threadsCol').innerHTML = '<div class="threads-col-header"><span class="dot"></span> Conversations</div><div class="thread-empty">Could not load conversations.</div>';
+        document.getElementById('threadsList').innerHTML = '<div class="thread-empty">Could not load conversations.</div>';
       }
     }
+
+    // ── New message: pick a repair shop ───────────────────────
+    let contactTimer = null;
+
+    function openNewMsgModal() {
+      document.getElementById('newMsgModal').classList.add('visible');
+      document.getElementById('contactSearch').value = '';
+      loadContacts('');
+      setTimeout(() => document.getElementById('contactSearch').focus(), 250);
+    }
+    function closeNewMsgModal() {
+      document.getElementById('newMsgModal').classList.remove('visible');
+    }
+
+    async function loadContacts(q) {
+      const list = document.getElementById('contactList');
+      list.innerHTML = '<div class="contact-empty">Loading…</div>';
+      try {
+        const res = await fetch('../api/messages.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'contacts', q })
+        });
+        const data = await res.json();
+        if (!data.success || !data.contacts.length) {
+          list.innerHTML = '<div class="contact-empty">No repair shops found.<br><small>Try a different search, or book a shop first.</small></div>';
+          return;
+        }
+        list.innerHTML = data.contacts.map(c => {
+          const av = c.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=2563eb&color=fff&size=80`;
+          return `
+            <div class="contact-item" onclick="startChatWith(${c.id}, '${escHtml(c.name)}')">
+              <img src="${av}" alt="" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(c.name)}&background=2563eb&color=fff&size=80'" />
+              <div>
+                <div class="contact-name">${escHtml(c.name)}</div>
+                <div class="contact-sub">${c.has_thread ? 'Existing conversation' : 'Start new chat'}</div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (err) {
+        list.innerHTML = '<div class="contact-empty">Could not load repair shops.</div>';
+      }
+    }
+
+    function startChatWith(id, name) {
+      closeNewMsgModal();
+      const existing = document.querySelector(`.thread-item[data-id="${id}"]`);
+      if (existing) { existing.click(); return; }
+      openThread(id, name, null);
+    }
+
+    document.getElementById('contactSearch').addEventListener('input', function () {
+      clearTimeout(contactTimer);
+      const q = this.value.trim();
+      contactTimer = setTimeout(() => loadContacts(q), 300);
+    });
+    document.getElementById('newMsgModal').addEventListener('click', function (e) {
+      if (e.target === this) closeNewMsgModal();
+    });
 
     async function openThread(otherId, otherName, el) {
       activeOtherId = otherId;
@@ -516,7 +623,7 @@ function closeLogoutModal() {
     });
 
     loadThreads();
-    setInterval(loadThreads, 15000); // light polling for new conversations/unread counts
+    setInterval(loadThreads, 15000);
   </script>
 </body>
 </html>

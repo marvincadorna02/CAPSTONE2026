@@ -101,45 +101,112 @@ $conn->close();
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Outfit',sans-serif;background:#fff;padding:32px 28px;height:100vh;overflow-y:auto;}
+    body{
+      font-family:'Outfit',sans-serif;
+      background:#0f172a;
+      background-image:radial-gradient(circle at 20% 20%, rgba(245,158,11,0.10), transparent 45%),
+                        radial-gradient(circle at 80% 80%, rgba(217,119,6,0.10), transparent 45%);
+      padding:32px 28px;
+      height:100vh;
+      overflow-y:auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .card{
+      width:100%;
+      max-width:380px;
+      background:#111e36;
+      border:1px solid rgba(245,158,11,0.15);
+      border-radius:18px;
+      padding:32px 28px;
+      box-shadow:0 20px 40px -12px rgba(0,0,0,0.5);
+    }
     .logo-row{display:flex;align-items:center;gap:8px;margin-bottom:24px;}
     .logo-row img{width:32px;height:32px;border-radius:7px;}
-    .logo-row span{font-size:15px;font-weight:800;color:#0f172a;}
+    .logo-row span{font-size:15px;font-weight:800;color:#f1f5f9;}
     .logo-row span b{color:#f59e0b;}
-    h2{font-size:1.25rem;font-weight:800;color:#0f172a;margin-bottom:6px;}
-    p.sub{color:#64748b;font-size:.83rem;margin-bottom:22px;line-height:1.5;}
-    label{font-size:.78rem;font-weight:700;color:#374151;display:block;margin-bottom:6px;}
-    input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.88rem;font-family:'Outfit',sans-serif;margin-bottom:16px;outline:none;transition:border-color .2s;}
+    h2{font-size:1.25rem;font-weight:800;color:#f1f5f9;margin-bottom:6px;}
+    p.sub{color:#94a3b8;font-size:.83rem;margin-bottom:22px;line-height:1.5;}
+    label{font-size:.78rem;font-weight:700;color:#cbd5e1;display:block;margin-bottom:6px;}
+    input{
+      width:100%;
+      padding:11px 14px;
+      background:#0b1526;
+      border:1.5px solid #1e293b;
+      border-radius:10px;
+      font-size:.88rem;
+      font-family:'Outfit',sans-serif;
+      color:#f1f5f9;
+      margin-bottom:16px;
+      outline:none;
+      transition:border-color .2s;
+    }
+    input::placeholder{color:#475569;}
     input:focus{border-color:#f59e0b;}
-    button{width:100%;padding:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:'Outfit',sans-serif;transition:transform .2s;}
+    button{
+      width:100%;
+      padding:12px;
+      background:linear-gradient(135deg,#f59e0b,#d97706);
+      color:white;
+      border:none;
+      border-radius:10px;
+      font-weight:700;
+      font-size:.88rem;
+      cursor:pointer;
+      font-family:'Outfit',sans-serif;
+      transition:transform .2s;
+      box-shadow:0 8px 20px -6px rgba(245,158,11,0.45);
+    }
     button:hover{transform:translateY(-1px);}
     .alert{padding:11px 14px;border-radius:10px;font-size:.8rem;font-weight:600;margin-bottom:16px;}
-    .alert-success{background:#d1fae5;color:#065f46;}
-    .alert-error{background:#fee2e2;color:#991b1b;}
-    .back-link{display:block;text-align:center;margin-top:18px;font-size:.82rem;color:#64748b;text-decoration:none;cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;width:100%;}
+    .alert-success{background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(16,185,129,0.25);}
+    .alert-error{background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);}
+          .back-link{
+        display:block;
+        text-align:center;
+        margin-top:18px;
+        font-size:.82rem;
+        color:#94a3b8;
+        text-decoration:none;
+        cursor:pointer;
+        background:none;
+        border:none;
+        box-shadow:none;
+        outline:none;
+        appearance:none;
+        -webkit-appearance:none;
+        padding:8px 0;
+        font-family:'Outfit',sans-serif;
+        width:100%;
+      }
+.back-link:hover{color:#f59e0b;}
+.back-link:focus{outline:none;}
     .back-link:hover{color:#f59e0b;}
   </style>
 </head>
 <body>
-  <div class="logo-row">
-    <img src="assets/images/logo.png" alt="Fix It Davao" />
-    <span>Fix It <b>Davao</b></span>
+  <div class="card">
+    <div class="logo-row">
+      <img src="assets/images/logo.png" alt="Fix It Davao" />
+      <span>Fix It <b>Davao</b></span>
+    </div>
+    <h2>Forgot Password?</h2>
+    <p class="sub">Enter your email and we'll send you a link to reset your password.</p>
+
+    <?php if ($msg): ?>
+    <div class="alert alert-<?php echo $msgType; ?>"><?php echo htmlspecialchars($msg); ?></div>
+    <?php endif; ?>
+
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
+      <label>Email Address</label>
+      <input type="email" name="email" placeholder="you@example.com" required />
+      <button type="submit">Send Reset Link</button>
+    </form>
+
+    <button class="back-link" onclick="handleBackToLogin()">← Back to Login</button>
   </div>
-  <h2>Forgot Password?</h2>
-  <p class="sub">Enter your email and we'll send you a link to reset your password.</p>
-
-  <?php if ($msg): ?>
-  <div class="alert alert-<?php echo $msgType; ?>"><?php echo htmlspecialchars($msg); ?></div>
-  <?php endif; ?>
-
-  <form method="POST">
-    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
-    <label>Email Address</label>
-    <input type="email" name="email" placeholder="you@example.com" required />
-    <button type="submit">Send Reset Link</button>
-  </form>
-
-  <button class="back-link" onclick="handleBackToLogin()">← Back to Login</button>
   <script>
 function handleBackToLogin() {
   if (window.parent !== window) {

@@ -555,7 +555,7 @@ body.sidebar-open .sidebar-backdrop {
         <div class="sub-stat-card sc-active">
           <div class="sub-stat-icon"><img src="../assets/icons/approve.svg" alt="" width="26" height="26"></div>
           <div>
-            <div class="sub-stat-val" data-target="<?php echo $stats['active_count']; ?>">0</div>
+            <div class="sub-stat-val"><?php echo $stats['active_count']; ?></div>
             <div class="sub-stat-lbl">Active Subscriptions</div>
           </div>
         </div>

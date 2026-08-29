@@ -268,6 +268,29 @@ $_SESSION['last_activity'] = time();
         }
         .stepper-line.done { background:#10b981; }
         .stepper-step:last-child .stepper-line { display:none; }
+        .stepper-line.done { background:#10b981; }
+        .stepper-step:last-child .stepper-line { display:none; }
+
+        @media (max-width: 480px) {
+          .booking-stepper {
+            padding: 0 4px;
+          }
+          .stepper-circle {
+            width: 24px;
+            height: 24px;
+            font-size: .62rem;
+          }
+          .stepper-line {
+            top: 11px;
+          }
+          .stepper-label {
+            font-size: .55rem;
+            line-height: 1.2;
+            white-space: normal;
+            word-break: break-word;
+            padding: 0 2px;
+          }
+        }
         .detail-item { background: #f8fafc; border-radius: 10px; padding: 9px 12px; }
         .detail-item-label { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #94a3b8; margin-bottom: 3px; }
         .detail-item-value { font-size: .85rem; font-weight: 600; color: #0f172a; }
@@ -1015,7 +1038,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
           return `<div class="booking-stepper">` + order.map((key, idx) => {
             let circleClass = '', content = idx + 1;
             if (idx < currentIdx)      { circleClass = 'done';    content = '✓'; }
-            else if (idx === currentIdx) { circleClass = 'current'; }
+            else if (idx === currentIdx) { circleClass = 'current'; content = '✓'; }
             const lineClass = idx < currentIdx ? 'done' : '';
             return `
               <div class="stepper-step">
