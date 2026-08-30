@@ -910,7 +910,7 @@ $conn->close();
           e.preventDefault();
           tryAdminContinue();
           return;
-        }
+        } 
         signInBtn.textContent = "Logging in..."; signInBtn.disabled = true;
         setTimeout(() => { signInBtn.textContent = "Sign in"; signInBtn.disabled = false; }, 3000);
       });

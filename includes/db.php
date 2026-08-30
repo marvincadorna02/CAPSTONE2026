@@ -72,8 +72,6 @@ function fixit_x($stmt) {
     catch (Throwable $e) { return false; }
 }
 
-// ── system_settings key/value helpers ────────────────────────────
-// Reads are cached per-request; the table is tiny and hit by several guards.
 
 function fixit_setting($conn, $key, $default = null) {
     static $cache = [];
