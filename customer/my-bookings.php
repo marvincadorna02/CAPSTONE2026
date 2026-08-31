@@ -166,6 +166,7 @@ $_SESSION['last_activity'] = time();
         .status-completed { background: #dbeafe; color: #1e40af; }
         .status-cancelled { background: #fee2e2; color: #991b1b; }
         .status-no_show   { background: #f3e8ff; color: #6b21a8; }
+        .status-unclaimed { background: #fee2e2; color: #991b1b; }
         .status-paid      { background: #ccfbf1; color: #115e59; }
         .status-claimed   { background: #e0e7ff; color: #3730a3; }
 
@@ -842,7 +843,7 @@ body.sidebar-open .sidebar-backdrop {
 
         // ── Count & update tabs ──────────────────────────────────
         function updateTabCounts() {
-          const counts = { all: allBookings.length, pending:0, confirmed:0, completed:0, paid:0, claimed:0, cancelled:0, no_show:0 };
+          const counts = { all: allBookings.length, pending:0, confirmed:0, completed:0, paid:0, claimed:0, cancelled:0, no_show:0, unclaimed:0 };
           allBookings.forEach(b => { if (counts[b.status] !== undefined) counts[b.status]++; });
           document.querySelectorAll('.tab-btn').forEach(btn => {
             const s = btn.dataset.status;
@@ -1011,12 +1012,13 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
           cancelled:'linear-gradient(135deg,#ef4444,#dc2626)',
           no_show:'linear-gradient(135deg,#8b5cf6,#7c3aed)',
           paid:'linear-gradient(135deg,#14b8a6,#0d9488)',
-          claimed:'linear-gradient(135deg,#6366f1,#4f46e5)'
+          claimed:'linear-gradient(135deg,#6366f1,#4f46e5)',
+          unclaimed:'linear-gradient(135deg,#dc2626,#991b1b)'
         };
 
                 function renderStepper(status) {
-          if (status === 'cancelled' || status === 'no_show') {
-            const label = status === 'cancelled' ? 'Cancelled' : 'No Show';
+          if (status === 'cancelled' || status === 'no_show' || status === 'unclaimed') {
+            const label = status === 'cancelled' ? 'Cancelled' : (status === 'no_show' ? 'No Show' : 'Not Claimed');
             return `
               <div class="booking-stepper">
                 <div class="stepper-step">
@@ -1257,6 +1259,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
               paid:         (shop)         => `Payment confirmed by <span>${shop}</span>. Ready for pickup! 💰`,
               claimed:      (shop)         => `You claimed your device from <span>${shop}</span>! 🎉`,
               no_show:      (shop)         => `<span>${shop}</span> marked your booking as no-show.`,
+              unclaimed:    (shop)         => `<span>${shop}</span> marked your device as not claimed. Please coordinate pickup.`,
               cancelled:    (shop)         => `<span>${shop}</span> cancelled your booking.`,
               review_reply: (shop, reply)  => `<span style="font-weight:800;color:#d97706;">${shop}:</span> ${reply}`,
               message:      (shop)         => `<span style="font-weight:800;color:#d97706;">${shop}</span> sent you a message 💬`,
@@ -1288,7 +1291,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
           const dropdown = document.getElementById('notifDropdown');
           notifOpen = !notifOpen;
           dropdown.classList.toggle('open', notifOpen);
-          if (notifOpen) { loadNotifications(); markAllRead(); }
+          if (notifOpen) { loadNotifications(); }
         }
 
         async function markAllRead() {

@@ -669,7 +669,6 @@ function toggleNotifDropdown() {
   dropdown.classList.toggle('open', notifOpen);
   if (notifOpen) {
     loadNotifications();
-    markAllRead();
   }
 }
 

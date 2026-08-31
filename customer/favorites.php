@@ -736,7 +736,6 @@ function toggleNotifDropdown() {
   dropdown.classList.toggle('open', notifOpen);
   if (notifOpen) {
     loadNotifications();
-    markAllRead(); // ← auto mark read pag open
   }
 }
 

@@ -620,9 +620,6 @@ function updateStats(users) {
   notifDropdown.classList.toggle("open", notifOpen);
   if (notifOpen) {
     loadNotifications();
-    setTimeout(() => {
-      document.getElementById("markAllRead").click();
-    }, 300);
   }
 });
       document.addEventListener("click",e=>{if(notifBtn&&!notifBtn.closest(".notif-wrapper").contains(e.target)){notifOpen=false;notifDropdown.classList.remove("open");}});

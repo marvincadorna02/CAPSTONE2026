@@ -887,6 +887,8 @@ html{
       <a href="#shops">Shops</a>
       <a href="login.php">Login</a>
       <a href="register.php">Register</a>
+      <a href="privacy-policy.php">Privacy Policy</a>
+      <a href="terms-of-service.php">Terms of Service</a>
     </div>
   </div>
   <div class="footer-bottom">

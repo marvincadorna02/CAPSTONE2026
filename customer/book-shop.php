@@ -1025,7 +1025,7 @@ function toggleNotifDropdown() {
   const dropdown = document.getElementById('notifDropdown');
   notifOpen = !notifOpen;
   dropdown.classList.toggle('open', notifOpen);
-  if (notifOpen) { loadNotifications(); markAllRead(); }
+  if (notifOpen) { loadNotifications(); }
 }
 async function markAllRead() {
   await fetch('../api/get_notifications.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({mark_read:true}) });

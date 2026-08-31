@@ -480,7 +480,7 @@
 
               <div class="remember-me">
                 <input type="checkbox" id="terms" name="terms" required />
-                <label for="terms">I agree to the Terms & Conditions</label>
+                <label for="terms">I agree to the <a href="privacy-policy.php" target="_blank" style="color:var(--accent,#f59e0b);font-weight:600;">Privacy Policy</a> & <a href="terms-of-service.php" target="_blank" style="color:var(--accent,#f59e0b);font-weight:600;">Terms of Service</a></label>
               </div>
 
               <button type="submit" class="sign-in-btn">Sign Up</button>

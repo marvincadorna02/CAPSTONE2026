@@ -9,6 +9,17 @@
 $chatbotApiPath = $chatbotApiPath ?? '../api/chatbot.php';
 $chatbotLogoPath = $chatbotLogoPath ?? '../assets/images/logo.png';
 
+// ── Static FAQ quick-replies: instant answers, no AI call needed ──
+$chatbotFaqs = [
+    ['q' => 'How do I book a repair?',        'a' => "Go to a shop's page and click 'Book Now'. Fill in your device details, pick a date and time, then submit — you'll see it under My Bookings."],
+    ['q' => 'How do I cancel a booking?',      'a' => "Open My Bookings, find the booking, and click Cancel. You can only cancel bookings that are still pending or confirmed."],
+    ['q' => 'How do I reschedule?',            'a' => "In My Bookings, click Reschedule on the booking and choose a new available date/time."],
+    ['q' => 'How does payment work?',          'a' => "Shop owners mark a booking as Paid once you've settled payment for the repair directly with them. Subscription payments (for shop owners) use GCash or bank transfer with proof upload."],
+    ['q' => 'I forgot my password',            'a' => "On the login page, click 'Forgot Password' and follow the OTP verification steps sent to your registered email."],
+    ['q' => 'How do favorites work?',          'a' => "Tap the heart icon on any shop to save it to your Favorites list for quick access later."],
+];
+
+
 // ── Resolve the logged-in customer's avatar (DB profile pic, else initials) ──
 if (session_status() === PHP_SESSION_NONE) session_start();
 $chatbotUserAvatar = '';
@@ -136,6 +147,14 @@ if (!empty($_SESSION['user_id'])) {
   }
   .fid-row { display: flex; align-items: flex-end; gap: 8px; }
   .fid-row.user { flex-direction: row-reverse; }
+  .fid-faq-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 42px; }
+  .fid-faq-chip {
+    background: #fff; border: 1px solid #e2e8f0; color: #1e293b;
+    font-size: .72rem; font-weight: 600; padding: 6px 10px;
+    border-radius: 14px; cursor: pointer; transition: background .15s ease, border-color .15s ease;
+  }
+  .fid-faq-chip:hover { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  .fid-faq-chip:disabled { opacity: .5; cursor: default; }
   .fid-avatar {
     width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -209,6 +228,11 @@ if (!empty($_SESSION['user_id'])) {
       <div class="fid-avatar bot"><img src="<?php echo htmlspecialchars($chatbotLogoPath); ?>" alt="Assistant" /></div>
       <div class="fid-msg bot">Hi! I'm the Fix It Davao Help Assistant. Ask me anything about booking a repair, your account, or how the site works.</div>
     </div>
+    <div class="fid-faq-chips" id="fidFaqChips">
+      <?php foreach ($chatbotFaqs as $i => $faq): ?>
+      <button type="button" class="fid-faq-chip" data-faq-index="<?php echo $i; ?>"><?php echo htmlspecialchars($faq['q']); ?></button>
+      <?php endforeach; ?>
+    </div>
   </div>
   <div class="fid-chat-footer">
     <textarea id="fidChatInput" class="fid-chat-input" rows="1" placeholder="Type your question..."></textarea>
@@ -225,6 +249,7 @@ if (!empty($_SESSION['user_id'])) {
   const CHAT_API = <?php echo json_encode($chatbotApiPath); ?>;
   const LOGO_SRC = <?php echo json_encode($chatbotLogoPath); ?>;
   const USER_AVATAR_URL = <?php echo json_encode($chatbotUserAvatar); ?>;
+  const FAQS = <?php echo json_encode($chatbotFaqs); ?>;
   const USER_AVATAR_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
 
   const toggleBtn = document.getElementById('fidChatToggle');
@@ -397,5 +422,22 @@ if (!empty($_SESSION['user_id'])) {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 90) + 'px';
   });
+
+  // ── FAQ quick-reply chips: answer instantly, no AI call ──
+  const faqChipsEl = document.getElementById('fidFaqChips');
+  if (faqChipsEl) {
+    faqChipsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.fid-faq-chip');
+      if (!btn || sending || coolingDown) return;
+      const faq = FAQS[+btn.dataset.faqIndex];
+      if (!faq) return;
+      addMessage(faq.q, 'user');
+      addMessage(faq.a, 'bot');
+      history.push({ role: 'user', content: faq.q });
+      history.push({ role: 'assistant', content: faq.a });
+      if (history.length > 10) history = history.slice(-10);
+      faqChipsEl.remove();
+    });
+  }
 })();
 </script>

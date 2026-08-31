@@ -1,4 +1,4 @@
-  <?php
+<?php
       session_start();
 require_once __DIR__ . '/../includes/guard.php';
 
@@ -946,7 +946,7 @@ require_once __DIR__ . '/../includes/guard.php';
         notifOpen = !notifOpen;
         const dropdown = document.getElementById('notifDropdown');
         dropdown.classList.toggle('open', notifOpen);
-        if (notifOpen) { loadNotifications(); markAllRead(); }
+        if (notifOpen) { loadNotifications(); }
       });
 
       document.addEventListener('click', (e) => {

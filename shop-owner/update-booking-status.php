@@ -18,7 +18,7 @@ $bookingId = (int)($_POST['booking_id'] ?? 0);
 $newStatus = trim($_POST['status']     ?? '');
 $shopId    = (int)$_SESSION['user_id'];
 
-$allowed = ['confirmed', 'completed', 'cancelled', 'no_show', 'paid', 'claimed'];
+$allowed = ['confirmed', 'completed', 'cancelled', 'no_show', 'paid', 'claimed', 'unclaimed'];
 if (!$bookingId || !in_array($newStatus, $allowed)) {
     echo json_encode(['error' => 'Invalid request']); exit();
 }
@@ -29,7 +29,7 @@ if ($conn->connect_error) {
 }
 
 // Ensure the enum supports the full booking lifecycle
-$conn->query("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','confirmed','completed','cancelled','no_show','paid','claimed') NOT NULL DEFAULT 'pending'");
+$conn->query("ALTER TABLE bookings MODIFY COLUMN status ENUM('pending','confirmed','completed','cancelled','no_show','paid','claimed','unclaimed') NOT NULL DEFAULT 'pending'");
 
 // Fetch current status to validate the transition (shop must own the booking)
 $cur = $conn->prepare("SELECT status FROM bookings WHERE id = ? AND shop_id = ?");
@@ -48,7 +48,7 @@ $transitions = [
     'pending'   => ['confirmed', 'cancelled'],
     'confirmed' => ['completed', 'cancelled', 'no_show'],
     'completed' => ['paid'],
-    'paid'      => ['claimed'],
+    'paid'      => ['claimed', 'unclaimed'],
 ];
 $current = $curRow['status'];
 if (!isset($transitions[$current]) || !in_array($newStatus, $transitions[$current], true)) {

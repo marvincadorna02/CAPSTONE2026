@@ -1539,6 +1539,7 @@ const sorted = allShops
         completed:    (shop)        => `Your repair at <span>${shop}</span> is complete.`,
         claimed:      (shop)        => `You claimed your device from <span>${shop}</span>!`,
         no_show:      (shop)        => `<span>${shop}</span> marked your booking as no-show.`,
+        unclaimed:    (shop)        => `<span>${shop}</span> marked a device as not claimed.`,
         cancelled:    (shop)        => `<span>${shop}</span> cancelled your booking.`,
         review_reply: (shop, reply) => `<span style="font-weight:800;color:var(--brand-dark);">${shop}:</span> ${reply}`,
         message:      (shop)        => `<span style="font-weight:800;color:var(--brand-dark);">${shop}</span> sent you a message 💬`,
@@ -1571,7 +1572,7 @@ const sorted = allShops
     const dropdown = document.getElementById('notifDropdown');
     notifOpen = !notifOpen;
     dropdown.classList.toggle('open', notifOpen);
-    if (notifOpen) { loadNotifications(); markAllRead(); }
+    if (notifOpen) { loadNotifications(); }
   }
 
   async function markAllRead() {

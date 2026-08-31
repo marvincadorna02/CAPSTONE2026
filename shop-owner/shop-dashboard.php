@@ -668,7 +668,7 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
         e.stopPropagation();
         notifOpen = !notifOpen;
         notifDropdown.classList.toggle('open', notifOpen);
-        if (notifOpen) { loadNotifs(); setTimeout(markAllRead, 400); }
+        if (notifOpen) { loadNotifs(); }
       });
       document.getElementById('markAllRead').addEventListener('click', markAllRead);
       document.addEventListener('click', (e) => {

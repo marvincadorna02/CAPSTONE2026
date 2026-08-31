@@ -891,7 +891,6 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         notifDropdown.classList.toggle("open", notifOpen);
         if (notifOpen) {
           loadNotifications();
-          setTimeout(() => { document.getElementById("markAllRead").click(); }, 300);
         }
       });
 

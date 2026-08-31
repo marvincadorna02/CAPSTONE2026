@@ -150,6 +150,7 @@ $conn->close();
     .status-completed { background:#dbeafe; color:#1e40af; }
     .status-cancelled { background:#fee2e2; color:#991b1b; }
     .status-no_show { background: #f3e8ff; color: #6b21a8; }
+    .status-unclaimed { background: #fee2e2; color: #991b1b; }
     .status-paid    { background:#ccfbf1; color:#115e59; }
     .status-claimed { background:#e0e7ff; color:#3730a3; }
 .btn-noshow { background: linear-gradient(135deg,#8b5cf6,#7c3aed); color: white; }
@@ -531,6 +532,9 @@ body.sidebar-open .sidebar-backdrop {
               <button class="action-btn btn-claimed" onclick="updateStatus(<?php echo $b['id']; ?>,'claimed',this)">
                 <img src="../assets/icons/nice.svg" width="13" height="13" alt="" /> Mark as Claimed
               </button>
+              <button class="action-btn btn-noshow" onclick="updateStatus(<?php echo $b['id']; ?>,'unclaimed',this)">
+                <img src="../assets/icons/xmark.svg" width="13" height="13" alt="" /> Not Claimed
+              </button>
             <?php endif; ?>
             <button class="action-btn btn-view-detail" onclick='viewDetail(<?php echo json_encode($b); ?>)'>
               <img src="../assets/icons/view.svg" width="13" height="13" alt="" /> View Details
@@ -578,7 +582,7 @@ body.sidebar-open .sidebar-backdrop {
 
     // ── Update booking status via AJAX ───────────────────────
     async function updateStatus(bookingId, newStatus, btn) {
-      const labels = { confirmed:'Confirm this booking?', cancelled:'Decline/cancel this booking?', completed:'Mark as completed?', no_show:'Mark customer as no-show?', paid:'Mark this booking as paid?', claimed:'Mark the device as claimed by the customer?' };
+      const labels = { confirmed:'Confirm this booking?', cancelled:'Decline/cancel this booking?', completed:'Mark as completed?', no_show:'Mark customer as no-show?', paid:'Mark this booking as paid?', claimed:'Mark the device as claimed by the customer?', unclaimed:'Mark this device as not claimed by the customer?' };
       if (!confirm(labels[newStatus] || 'Are you sure?')) return;
 
       btn.disabled = true;
@@ -619,8 +623,8 @@ body.sidebar-open .sidebar-backdrop {
           </div>`;
       }
 
-      const order = ['pending', 'confirmed', 'completed', 'paid', 'claimed'];
-      const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', paid: 'Paid', claimed: 'Claimed' };
+      const order = ['pending', 'confirmed', 'completed', 'paid', 'claimed', 'unclaimed'];
+      const labels = { pending: 'Pending', confirmed: 'Confirmed', completed: 'Completed', paid: 'Paid', claimed: 'Claimed', unclaimed: 'Not Claimed' };
       const currentIdx = order.indexOf(status);
 
       return `<div class="booking-stepper">` + order.map((key, idx) => {
@@ -639,8 +643,8 @@ body.sidebar-open .sidebar-backdrop {
 
     // ── View detail modal ────────────────────────────────────
       function viewDetail(b) {
-      const statusColors = { pending:'#92400e', confirmed:'#065f46', completed:'#1e40af', cancelled:'#991b1b', no_show:'#6b21a8', paid:'#115e59', claimed:'#3730a3' };
-      const statusBg     = { pending:'#fef3c7', confirmed:'#d1fae5', completed:'#dbeafe', cancelled:'#fee2e2', no_show:'#f3e8ff', paid:'#ccfbf1', claimed:'#e0e7ff' };
+      const statusColors = { pending:'#92400e', confirmed:'#065f46', completed:'#1e40af', cancelled:'#991b1b', no_show:'#6b21a8', paid:'#115e59', claimed:'#3730a3', unclaimed:'#991b1b' };
+      const statusBg     = { pending:'#fef3c7', confirmed:'#d1fae5', completed:'#dbeafe', cancelled:'#fee2e2', no_show:'#f3e8ff', paid:'#ccfbf1', claimed:'#e0e7ff', unclaimed:'#fee2e2' };
 
       document.getElementById('detailStepper').innerHTML = renderStepper(b.status);
 
@@ -669,6 +673,7 @@ body.sidebar-open .sidebar-backdrop {
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#14b8a6,#0d9488);" onclick="closeDetailModal();updateStatus(${b.id},'paid',document.createElement('button'))">Mark as Paid</button>`;
       } else if (b.status === 'paid') {
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="closeDetailModal();updateStatus(${b.id},'claimed',document.createElement('button'))">Mark as Claimed</button>`;
+        actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#dc2626,#991b1b);" onclick="closeDetailModal();updateStatus(${b.id},'unclaimed',document.createElement('button'))">Not Claimed</button>`;
       }
       document.getElementById('detailActions').innerHTML = actionsHtml;
 
@@ -793,7 +798,6 @@ function toggleNotifDropdown() {
   dropdown.classList.toggle('open', notifOpen);
   if (notifOpen) {
     loadNotifications();
-    markAllRead();
   }
 }
 

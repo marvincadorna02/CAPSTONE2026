@@ -1167,10 +1167,6 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
   notifDropdown.classList.toggle("open", notifOpen);
   if (notifOpen) {
     loadNotifications();
-    // Auto mark all read pag open
-    setTimeout(() => {
-      document.getElementById("markAllRead").click();
-    }, 300); // slight delay para ma-render muna ang list
   }
 });
 
