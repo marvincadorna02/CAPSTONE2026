@@ -80,7 +80,7 @@ while ($b = $result->fetch_assoc()) $bookings[] = $b;
 $bResult->close();
 
 // ── Count per status ─────────────────────────────────────────
-$counts = ['all'=>0,'pending'=>0,'confirmed'=>0,'completed'=>0,'paid'=>0,'claimed'=>0,'cancelled'=>0];
+$counts = ['all'=>0,'pending'=>0,'confirmed'=>0,'completed'=>0,'paid'=>0,'claimed'=>0,'cancelled'=>0,'no_show'=>0,'unclaimed'=>0];
 foreach ($bookings as $b) {
     $counts['all']++;
     $counts[$b['status']] = ($counts[$b['status']] ?? 0) + 1;
@@ -432,6 +432,8 @@ body.sidebar-open .sidebar-backdrop {
         <button class="tab-btn" data-status="completed">Completed (<?php echo $counts['completed']; ?>)</button>
         <button class="tab-btn" data-status="paid">Paid (<?php echo $counts['paid']; ?>)</button>
         <button class="tab-btn" data-status="claimed">Claimed (<?php echo $counts['claimed']; ?>)</button>
+        <button class="tab-btn" data-status="no_show">No Show (<?php echo $counts['no_show']; ?>)</button>
+        <button class="tab-btn" data-status="unclaimed">Unclaimed (<?php echo $counts['unclaimed']; ?>)</button>
         <button class="tab-btn" data-status="cancelled">Cancelled (<?php echo $counts['cancelled']; ?>)</button>
       </div>
 
