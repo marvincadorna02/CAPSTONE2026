@@ -91,6 +91,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(['success' => true]);
         $conn->close(); exit();
     }
+
+    // ── Mark ONE notification as read (bell dropdown click) ─────
+    if (isset($input['mark_one'])) {
+        $type = $input['type'] ?? '';
+
+        if ($type === 'reschedule' && !empty($input['notif_id'])) {
+            $rnId = (int)$input['notif_id'];
+            $upd = $conn->prepare("UPDATE reschedule_notifications SET is_read = 1 WHERE id = ? AND shop_id = ?");
+            $upd->bind_param("ii", $rnId, $userId);
+            $upd->execute();
+            $upd->close();
+        } elseif ($type === 'booking' && !empty($input['booking_id']) && !empty($input['status'])) {
+            $bId = (int)$input['booking_id'];
+            $st  = (string)$input['status'];
+            $chk = $conn->prepare("SELECT id FROM bookings WHERE id = ? AND shop_id = ?");
+            $chk->bind_param("ii", $bId, $userId);
+            $chk->execute();
+            if ($chk->get_result()->fetch_assoc()) {
+                $ins = $conn->prepare("INSERT IGNORE INTO shop_notification_reads (shop_id, booking_id, status_seen) VALUES (?, ?, ?)");
+                $ins->bind_param("iis", $userId, $bId, $st);
+                $ins->execute();
+                $ins->close();
+            }
+            $chk->close();
+        } elseif ($type === 'review' && !empty($input['review_id'])) {
+            $rId = (int)$input['review_id'];
+            $chk = $conn->prepare("SELECT id FROM reviews WHERE id = ? AND shop_id = ?");
+            $chk->bind_param("ii", $rId, $userId);
+            $chk->execute();
+            if ($chk->get_result()->fetch_assoc()) {
+                $ins = $conn->prepare("INSERT IGNORE INTO shop_review_reads (shop_id, review_id) VALUES (?, ?)");
+                $ins->bind_param("ii", $userId, $rId);
+                $ins->execute();
+                $ins->close();
+            }
+            $chk->close();
+        } elseif ($type === 'subscription' && !empty($input['subscription_id']) && !empty($input['status'])) {
+            $sId = (int)$input['subscription_id'];
+            $st  = (string)$input['status'];
+            $chk = $conn->prepare("SELECT id FROM shop_subscriptions WHERE id = ? AND shop_id = ?");
+            $chk->bind_param("ii", $sId, $userId);
+            $chk->execute();
+            if ($chk->get_result()->fetch_assoc()) {
+                $ins = $conn->prepare("INSERT IGNORE INTO subscription_notification_reads (shop_id, subscription_id, status_seen) VALUES (?, ?, ?)");
+                $ins->bind_param("iis", $userId, $sId, $st);
+                $ins->execute();
+                $ins->close();
+            }
+            $chk->close();
+        } elseif ($type === 'system' && !empty($input['notif_id'])) {
+            $nId = (int)$input['notif_id'];
+            $upd = fixit_p($conn, "UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
+            if ($upd) { $upd->bind_param("ii", $nId, $userId); fixit_x($upd); $upd->close(); }
+        }
+        // 'message' type needs no server write here — opening the thread
+        // already marks those messages read.
+
+        echo json_encode(['success' => true]);
+        $conn->close(); exit();
+    }
 }
 
 $notifications = [];
@@ -117,6 +177,7 @@ while ($row = $result3->fetch_assoc()) {
     $rescheduledBookingIds[] = $row['booking_id'];
     $notifications[] = [
         'type'          => 'reschedule',
+        'notif_id'      => $row['id'],
         'booking_id'    => $row['booking_id'],
         'status'        => 'rescheduled',
         'customer_name' => $row['customer_name'],

@@ -993,8 +993,10 @@ async function loadNotifications() {
     }
     if (!data.notifications?.length) {
       list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+      window.__notifs = [];
       return;
     }
+    window.__notifs = data.notifications;
     const STATUS_MSG = {
       confirmed: (shop) => `<span>${shop}</span> confirmed your booking! 🎉`,
       completed: (shop) => `Your repair at <span>${shop}</span> is complete! ✅`,
@@ -1005,12 +1007,12 @@ async function loadNotifications() {
       review_reply: (shop, reply) => `<span style="font-weight:800;color:#d97706;">${shop}:</span> ${reply}`,
       message:   (shop) => `<span style="font-weight:800;color:#d97706;">${shop}</span> sent you a message 💬`,
     };
-    list.innerHTML = data.notifications.map(n => {
+    list.innerHTML = data.notifications.map((n, idx) => {
       const logo = n.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
       const msg = STATUS_MSG[n.status] ? STATUS_MSG[n.status](n.shop_name||'Shop', n.reply||'') : `<span>${n.shop_name||'Shop'}:</span> ${n.reply||n.status}`;
       const time = n.time ? new Date(n.time).toLocaleDateString('en-PH',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '';
       const dest = n.link ? ('../' + n.link) : n.status === 'message' ? ('messages.php' + (n.other_id ? '?open=' + n.other_id : '')) : 'my-bookings.php';
-      return `<div class="notif-item ${n.is_read?'':'unread'}" onclick="window.location.href='${dest}'">
+      return `<div class="notif-item ${n.is_read?'':'unread'}" onclick="handleNotifClick(${idx}, '${dest}')">
         <img src="${logo}" class="notif-logo" alt="" onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=f59e0b&color=fff&size=80'" />
         <div class="notif-content">
           <div class="notif-message">${msg}</div>
@@ -1020,6 +1022,31 @@ async function loadNotifications() {
       </div>`;
     }).join('');
   } catch(e) { console.error('Notif error:', e); }
+}
+async function handleNotifClick(idx, dest) {
+  const n = (window.__notifs || [])[idx];
+  if (n && !n.is_read) {
+    let payload = null;
+    if (n.status === 'review_reply' && n.review_id) {
+      payload = { mark_one: true, type: 'review', review_id: n.review_id };
+    } else if (n.status === 'system' && n.notif_id) {
+      payload = { mark_one: true, type: 'system', notif_id: n.notif_id };
+    } else if (n.status === 'message') {
+      payload = null;
+    } else if (n.booking_id && n.status) {
+      payload = { mark_one: true, type: 'booking', booking_id: n.booking_id, status: n.status };
+    }
+    if (payload) {
+      try {
+        await fetch('../api/get_notifications.php', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+      } catch (e) {}
+    }
+    const badge = document.getElementById('notifBadge');
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - 1;
+    if (next > 0) { badge.textContent = next; } else { badge.style.display = 'none'; }
+  }
+  window.location.href = dest;
 }
 function toggleNotifDropdown() {
   const dropdown = document.getElementById('notifDropdown');
@@ -1041,6 +1068,7 @@ document.addEventListener('click', (e) => {
   }
 });
 loadNotifications();
+setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 </script>
 <script>
 setTimeout(function () {
@@ -1049,5 +1077,6 @@ setTimeout(function () {
 </script>
 
 <?php $chatbotApiPath = '../api/chatbot.php'; include __DIR__ . '/../includes/chatbot-widget.php'; ?>
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
 </html>

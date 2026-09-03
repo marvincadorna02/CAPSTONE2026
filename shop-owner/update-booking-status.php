@@ -49,6 +49,7 @@ $transitions = [
     'confirmed' => ['completed', 'cancelled', 'no_show'],
     'completed' => ['paid'],
     'paid'      => ['claimed', 'unclaimed'],
+    'unclaimed' => ['claimed'],
 ];
 $current = $curRow['status'];
 if (!isset($transitions[$current]) || !in_array($newStatus, $transitions[$current], true)) {

@@ -448,6 +448,9 @@ function closeLogoutModal() {
     let myAvatar = '';
     let otherAvatar = '';
     let sending = false;
+    let msgPollTimer = null;
+    let lastMsgId = 0;
+    const MINE_ROLE = 'shop';
     const myName = <?php echo json_encode($userName); ?>;
 
     function fallbackAvatar(name) {
@@ -566,6 +569,7 @@ function closeLogoutModal() {
       document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Loading…</div>';
       document.getElementById('chatInput').disabled = false;
       document.getElementById('chatSend').disabled = false;
+      lastMsgId = 0;
 
       try {
         const res = await fetch('../api/messages.php', {
@@ -578,11 +582,43 @@ function closeLogoutModal() {
         if (!data.success) { bodyEl.innerHTML = '<div class="chat-empty">Could not load messages.</div>'; return; }
         otherAvatar = data.other_avatar || '';
         myAvatar    = data.my_avatar || '';
-        if (!data.messages.length) { bodyEl.innerHTML = '<div class="chat-empty">No messages yet.</div>'; return; }
-        bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === 'shop')).join('');
-        bodyEl.scrollTop = bodyEl.scrollHeight;
+        if (!data.messages.length) {
+          bodyEl.innerHTML = '<div class="chat-empty">No messages yet.</div>';
+        } else {
+          bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join('');
+          lastMsgId = data.messages[data.messages.length - 1].id;
+          bodyEl.scrollTop = bodyEl.scrollHeight;
+        }
       } catch (err) {
         document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Network error.</div>';
+      }
+
+      clearInterval(msgPollTimer);
+      msgPollTimer = setInterval(pollNewMessages, 3000);
+    }
+
+    async function pollNewMessages() {
+      if (!activeOtherId) return;
+      try {
+        const res = await fetch('../api/messages.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'since', other_id: activeOtherId, after_id: lastMsgId })
+        });
+        const data = await res.json();
+        if (!data.success || !data.messages.length) return;
+
+        const bodyEl = document.getElementById('chatBody');
+        if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
+        const wasNearBottom = bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
+
+        bodyEl.insertAdjacentHTML('beforeend', data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join(''));
+        lastMsgId = data.messages[data.messages.length - 1].id;
+
+        if (wasNearBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
+        loadThreads();
+      } catch (err) {
+        // silent fail, will retry next tick
       }
     }
 
@@ -611,6 +647,7 @@ function closeLogoutModal() {
         if (!data.success) {
           bodyEl.insertAdjacentHTML('beforeend', `<div class="chat-empty">${escHtml(data.message || 'Failed to send.')}</div>`);
         } else {
+          if (data.id) lastMsgId = Math.max(lastMsgId, Number(data.id));
           loadThreads();
         }
       } catch (err) {
@@ -630,8 +667,10 @@ function closeLogoutModal() {
       this.style.height = Math.min(this.scrollHeight, 90) + 'px';
     });
 
+    window.addEventListener('beforeunload', () => clearInterval(msgPollTimer));
+
     loadThreads();
-    setInterval(loadThreads, 15000); // light polling for new conversations/unread counts
+    setInterval(loadThreads, 15000);
   </script>
 </body>
 </html>

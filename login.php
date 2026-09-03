@@ -36,7 +36,7 @@ if ($conn->connect_error) {
 
 // ── Brute Force Protection ────────────────────────────────────
 define('MAX_ATTEMPTS',    5);
-define('LOCKOUT_MINUTES', 15);
+define('LOCKOUT_MINUTES', 5);
 
 // ── Admin credentials ───────────────────────────────────────────
 // Pulled from .env instead of being hardcoded in source. See
@@ -46,13 +46,15 @@ define('ADMIN_ACCESS_CODE',   $_ENV['ADMIN_ACCESS_CODE']   ?? '');
 define('ADMIN_USERNAME',      $_ENV['ADMIN_USERNAME']      ?? '');
 define('ADMIN_PASSWORD_HASH', $_ENV['ADMIN_PASSWORD_HASH'] ?? '');
 
+// Same PHP/MySQL timezone concern applies here — use MySQL's own NOW()
+// for the window boundary instead of a PHP-computed date string, so the
+// attempt count is always measured against the DB's own clock.
 function getLoginAttempts($conn, $email, $ip, $loginType) {
-    $window = date('Y-m-d H:i:s', strtotime('-' . LOCKOUT_MINUTES . ' minutes'));
     $stmt   = $conn->prepare(
         "SELECT COUNT(*) as cnt FROM login_attempts
-         WHERE email = ? AND login_type = ? AND attempted_at > ?"
+         WHERE email = ? AND login_type = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL " . LOCKOUT_MINUTES . " MINUTE)"
     );
-    $stmt->bind_param("sss", $email, $loginType, $window);
+    $stmt->bind_param("ss", $email, $loginType);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc()['cnt'];
 }
@@ -73,28 +75,38 @@ function clearLoginAttempts($conn, $email, $ip, $loginType) {
     $stmt->execute();
 }
 
-// ── FIX: added the same time-window filter used in getLoginAttempts().
-// Before, this query grabbed the oldest 5 attempts EVER recorded for the
-// email/type (no time bound), so if someone had old failed attempts from
-// way back, the lockout countdown could balloon to hours instead of the
-// intended LOCKOUT_MINUTES (this is why it showed "239m" earlier).
+// ── FIX: compute the unlock countdown entirely on the MySQL side using
+// NOW() and TIMESTAMPDIFF(), instead of mixing PHP's time()/strtotime()
+// with MySQL datetime strings. Mixing the two broke badly whenever PHP's
+// date.timezone (php.ini) didn't match the MySQL server's timezone —
+// strtotime() would silently misinterpret the naive datetime string,
+// producing huge phantom lockout times (hours instead of minutes).
+// Letting MySQL do NOW() - attempted_at itself avoids any PHP/MySQL
+// timezone mismatch entirely, since both sides come from the same DB.
 function getLockoutSecondsLeft($conn, $email, $ip, $loginType) {
-    $window = date('Y-m-d H:i:s', strtotime('-' . LOCKOUT_MINUTES . ' minutes'));
     $stmt = $conn->prepare(
         "SELECT attempted_at FROM login_attempts
-         WHERE email = ? AND login_type = ? AND attempted_at > ?
+         WHERE email = ? AND login_type = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL " . LOCKOUT_MINUTES . " MINUTE)
          ORDER BY attempted_at ASC LIMIT " . MAX_ATTEMPTS
     );
-    $stmt->bind_param("sss", $email, $loginType, $window);
+    $stmt->bind_param("ss", $email, $loginType);
     $stmt->execute();
     $result = $stmt->get_result();
     $rows = $result->fetch_all(MYSQLI_ASSOC);
 
     if (count($rows) < MAX_ATTEMPTS) return 0;
 
-    $oldest = strtotime($rows[0]['attempted_at']);
-    $unlockAt = $oldest + (LOCKOUT_MINUTES * 60);
-    $secondsLeft = $unlockAt - time();
+    $oldestAttempt = $rows[0]['attempted_at'];
+
+    // Ask MySQL directly how many seconds remain until oldestAttempt + LOCKOUT_MINUTES,
+    // using MySQL's own NOW() so there's no PHP-vs-MySQL clock/timezone drift.
+    $secStmt = $conn->prepare(
+        "SELECT TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(?, INTERVAL " . LOCKOUT_MINUTES . " MINUTE)) AS secs_left"
+    );
+    $secStmt->bind_param("s", $oldestAttempt);
+    $secStmt->execute();
+    $secondsLeft = (int)$secStmt->get_result()->fetch_assoc()['secs_left'];
+    $secStmt->close();
 
     return max(0, $secondsLeft);
 }

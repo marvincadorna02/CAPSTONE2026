@@ -1053,5 +1053,6 @@ require_once __DIR__ . '/../includes/guard.php';
       }, 1800000); // 30 minutes
       </script>
       <?php include __DIR__ . '/../includes/account-modal.php'; ?>
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
       </html>

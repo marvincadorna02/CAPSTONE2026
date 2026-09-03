@@ -4,6 +4,7 @@
 // Actions (all POST, JSON body):
 //   { action: 'list' }                          -> list of conversation threads for the logged-in user
 //   { action: 'thread', other_id: <id> }         -> full message history with one counterpart, marks incoming as read
+//   { action: 'since',  other_id: <id>, after_id: <id> } -> only new messages after a given id (for polling)
 //   { action: 'send',   other_id: <id>, message: '...' } -> send a message
 //   { action: 'contacts', q: '...' }             -> (shop only) customers the shop can start a new chat with
 
@@ -177,6 +178,61 @@ if ($action === 'thread') {
         'other_avatar' => $other['logo_url'] ?: $other['profile_picture'],
         'my_avatar'    => ($me['logo_url'] ?? '') ?: ($me['profile_picture'] ?? ''),
     ]);
+    exit();
+}
+
+// ── SINCE: only new messages after a given id (for polling) ──
+if ($action === 'since') {
+    $otherId = (int)($input['other_id'] ?? 0);
+    $afterId = (int)($input['after_id'] ?? 0);
+    if ($otherId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'other_id is required.']);
+        exit();
+    }
+
+    if ($myRole === 'customer') {
+        $shopId = $otherId; $customerId = $myId;
+    } else {
+        $shopId = $myId; $customerId = $otherId;
+    }
+
+    // Verify counterpart exists and has the expected role (IDOR guard)
+    $checkStmt = $conn->prepare("SELECT role FROM users WHERE id = ?");
+    $checkStmt->bind_param("i", $otherId);
+    $checkStmt->execute();
+    $other = $checkStmt->get_result()->fetch_assoc();
+    $checkStmt->close();
+    $expectedRole = $myRole === 'customer' ? 'repairshop' : 'customer';
+    if (!$other || $other['role'] !== $expectedRole) {
+        echo json_encode(['success' => false, 'message' => 'User not found.']);
+        exit();
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT id, sender_role, message, created_at, is_read
+         FROM messages WHERE shop_id = ? AND customer_id = ? AND id > ? ORDER BY id ASC"
+    );
+    $stmt->bind_param("iii", $shopId, $customerId, $afterId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $msgs = [];
+    while ($row = $res->fetch_assoc()) {
+        $msgs[] = $row;
+    }
+    $stmt->close();
+
+    // Mark incoming messages (from the other party) as read
+    $incomingRole = $myRole === 'customer' ? 'shop' : 'customer';
+    $markStmt = $conn->prepare(
+        "UPDATE messages SET is_read = 1
+         WHERE shop_id = ? AND customer_id = ? AND sender_role = ? AND is_read = 0"
+    );
+    $markStmt->bind_param("iis", $shopId, $customerId, $incomingRole);
+    $markStmt->execute();
+    $markStmt->close();
+
+    $conn->close();
+    echo json_encode(['success' => true, 'messages' => $msgs]);
     exit();
 }
 

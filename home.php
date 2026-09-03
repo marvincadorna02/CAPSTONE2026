@@ -1081,5 +1081,6 @@ authOverlay.addEventListener('click', (e) => { if (e.target === authOverlay) clo
   $chatbotLogoPath = 'assets/images/logo.png';
   include __DIR__ . '/includes/chatbot-widget.php';
 ?>
+  <script src="assets/js/ui-modals.js"></script>
 </body>
 </html>

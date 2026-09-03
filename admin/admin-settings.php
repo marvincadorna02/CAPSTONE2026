@@ -560,15 +560,18 @@ $counts = $conn->query("SELECT
       blastBtn.disabled = this.value.trim() !== 'SEND';
     });
     document.getElementById('blastForm').addEventListener('submit', function (e) {
+      e.preventDefault();
       const target = document.getElementById('blast_target');
       const label  = target.options[target.selectedIndex].text;
-      if (!confirm('Send this announcement to ' + label + '?\n\nThis cannot be undone.')) {
-        e.preventDefault();
-        return;
-      }
-      blastBtn.disabled = true;
-      blastBtn.textContent = 'Sending…';
+      customConfirm('Send this announcement to ' + label + '?\n\nThis cannot be undone.', { danger: true, confirmLabel: 'Send' }).then((ok) => {
+        if (!ok) return;
+        blastBtn.disabled = true;
+        blastBtn.textContent = 'Sending…';
+        e.target.submit();
+      });
+    });
     });
   </script>
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
 </html>

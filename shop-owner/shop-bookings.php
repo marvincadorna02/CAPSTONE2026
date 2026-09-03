@@ -537,6 +537,10 @@ body.sidebar-open .sidebar-backdrop {
               <button class="action-btn btn-noshow" onclick="updateStatus(<?php echo $b['id']; ?>,'unclaimed',this)">
                 <img src="../assets/icons/xmark.svg" width="13" height="13" alt="" /> Not Claimed
               </button>
+            <?php elseif ($b['status'] === 'unclaimed'): ?>
+              <button class="action-btn btn-claimed" onclick="updateStatus(<?php echo $b['id']; ?>,'claimed',this)">
+                <img src="../assets/icons/nice.svg" width="13" height="13" alt="" /> Mark as Claimed
+              </button>
             <?php endif; ?>
             <button class="action-btn btn-view-detail" onclick='viewDetail(<?php echo json_encode($b); ?>)'>
               <img src="../assets/icons/view.svg" width="13" height="13" alt="" /> View Details
@@ -585,7 +589,7 @@ body.sidebar-open .sidebar-backdrop {
     // ── Update booking status via AJAX ───────────────────────
     async function updateStatus(bookingId, newStatus, btn) {
       const labels = { confirmed:'Confirm this booking?', cancelled:'Decline/cancel this booking?', completed:'Mark as completed?', no_show:'Mark customer as no-show?', paid:'Mark this booking as paid?', claimed:'Mark the device as claimed by the customer?', unclaimed:'Mark this device as not claimed by the customer?' };
-      if (!confirm(labels[newStatus] || 'Are you sure?')) return;
+      if (!(await customConfirm(labels[newStatus] || 'Are you sure?'))) return;
 
       btn.disabled = true;
       try {
@@ -676,6 +680,8 @@ body.sidebar-open .sidebar-backdrop {
       } else if (b.status === 'paid') {
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="closeDetailModal();updateStatus(${b.id},'claimed',document.createElement('button'))">Mark as Claimed</button>`;
         actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#dc2626,#991b1b);" onclick="closeDetailModal();updateStatus(${b.id},'unclaimed',document.createElement('button'))">Not Claimed</button>`;
+      } else if (b.status === 'unclaimed') {
+        actionsHtml += `<button class="modal-btn-confirm" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="closeDetailModal();updateStatus(${b.id},'claimed',document.createElement('button'))">Mark as Claimed</button>`;
       }
       document.getElementById('detailActions').innerHTML = actionsHtml;
 
@@ -831,5 +837,6 @@ setTimeout(function () {
 }, 1800000); // 30 minutes
 </script>
 <?php include __DIR__ . '/../includes/account-modal.php'; ?>
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
 </html>

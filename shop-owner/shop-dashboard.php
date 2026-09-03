@@ -625,14 +625,15 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
       }
 
       function renderBell(items) {
+        window.__shopNotifs = items || [];
         if (!items || !items.length) {
           notifList.innerHTML = `<div class="notif-empty">🎉 No notifications yet.</div>`;
           return;
         }
-        notifList.innerHTML = items.map(n => {
+        notifList.innerHTML = items.map((n, idx) => {
           const a = mapActivity(n);
           const unread = !n.is_read;
-          return `<div class="notif-item ${unread ? 'unread' : ''}" onclick="window.location.href='${a.dest}'">
+          return `<div class="notif-item ${unread ? 'unread' : ''}" onclick="handleShopNotifClick(${idx}, '${a.dest}')">
             <div class="notif-dot-icon">${a.icon}</div>
             <div class="notif-content">
               <div class="notif-title">${a.label}</div>
@@ -642,6 +643,42 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
             ${unread ? '<div class="notif-unread-dot"></div>' : ''}
           </div>`;
         }).join('');
+      }
+
+      // ── Mark ONE notification as read, decrement badge by 1, then navigate ──
+      async function handleShopNotifClick(idx, dest) {
+        const n = (window.__shopNotifs || [])[idx];
+        if (n && !n.is_read) {
+          let payload = null;
+          if (n.type === 'reschedule' && n.notif_id) {
+            payload = { mark_one: true, type: 'reschedule', notif_id: n.notif_id };
+          } else if (n.type === 'booking' && n.booking_id && n.status) {
+            payload = { mark_one: true, type: 'booking', booking_id: n.booking_id, status: n.status };
+          } else if (n.type === 'review' && n.review_id) {
+            payload = { mark_one: true, type: 'review', review_id: n.review_id };
+          } else if (n.type === 'subscription' && n.subscription_id && n.status) {
+            payload = { mark_one: true, type: 'subscription', subscription_id: n.subscription_id, status: n.status };
+          } else if (n.type === 'system' && n.notif_id) {
+            payload = { mark_one: true, type: 'system', notif_id: n.notif_id };
+          }
+          // 'message' type needs no server write — opening the thread marks it read.
+
+          if (payload) {
+            try {
+              await fetch('../api/get_shop_notifications.php', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload)
+              });
+            } catch (e) { /* navigate anyway */ }
+          }
+
+          const current = parseInt(notifBadge.textContent, 10) || 0;
+          const next = current - 1;
+          if (next > 0) { notifBadge.textContent = next; }
+          else { notifBadge.classList.remove('show'); }
+        }
+        window.location.href = dest;
       }
 
       async function loadNotifs() {
@@ -675,7 +712,7 @@ $avatarUrl = $savedLogoUrl ?: "https://ui-avatars.com/api/?name=" . urlencode($u
         if (!notifBtn.closest('.notif-wrapper').contains(e.target)) { notifOpen = false; notifDropdown.classList.remove('open'); }
       });
       loadNotifs();
-      setInterval(loadNotifs, 60000);
+      setInterval(loadNotifs, 15000); // poll every 15s so the bell stays live without a reload
     </script>
     <script>
     (function(){

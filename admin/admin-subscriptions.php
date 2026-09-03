@@ -645,13 +645,14 @@ body.sidebar-open .sidebar-backdrop {
           </div>
           <?php endif; ?>
 
-          <form method="POST" style="margin:0;">
+          <form method="POST" style="margin:0;" class="sub-approve-form">
             <input type="hidden" name="sub_id" value="<?php echo $sub['id']; ?>" />
             <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
+            <input type="hidden" name="action" class="sub-action-field" value="" />
             <div class="action-row">
               <input type="text" name="admin_note" class="note-input" placeholder="Optional note to shop (e.g., reason for rejection)..." />
-              <button type="submit" name="action" value="approve" class="btn-approve" onclick="return confirm('Approve this subscription?')">✅ Approve</button>
-              <button type="submit" name="action" value="reject"  class="btn-reject"  onclick="return confirm('Reject this payment?')">❌ Reject</button>
+              <button type="button" class="btn-approve" onclick="return confirmSubAction(this, 'approve', 'Approve this subscription?', false)">✅ Approve</button>
+              <button type="button" class="btn-reject"  onclick="return confirmSubAction(this, 'reject', 'Reject this payment?', true)">❌ Reject</button>
             </div>
           </form>
         </div>
@@ -714,7 +715,7 @@ body.sidebar-open .sidebar-backdrop {
                 <td style="font-family:'Space Mono',monospace;font-size:.72rem;"><?php echo htmlspecialchars($sub['payment_ref'] ?: '—'); ?></td>
                 <td>
                   <?php if ($sub['status'] === 'active'): ?>
-                  <form method="POST" style="margin:0;" onsubmit="return confirm('Manually expire this subscription?')">
+                  <form method="POST" style="margin:0;" onsubmit="return confirmSubmitForm(this, 'Manually expire this subscription?', true)">
                     <input type="hidden" name="sub_id" value="<?php echo $sub['id']; ?>" />
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>" />
                     <button type="submit" name="action" value="expire" class="btn-expire-sm">Expire</button>
@@ -866,5 +867,24 @@ document.getElementById("markAllRead").addEventListener("click", () => {
 
 renderNotifications();
   </script>
+  <script>
+    // ── Custom-modal helpers for POST forms (replaces native confirm()) ──
+    function confirmSubAction(btn, action, message, danger) {
+      customConfirm(message, { danger: !!danger, confirmLabel: danger ? 'Yes, Reject' : 'Approve' }).then((ok) => {
+        if (!ok) return;
+        const form = btn.closest('form');
+        form.querySelector('.sub-action-field').value = action;
+        form.submit();
+      });
+      return false;
+    }
+    function confirmSubmitForm(form, message, danger) {
+      customConfirm(message, { danger: !!danger }).then((ok) => {
+        if (ok) form.submit();
+      });
+      return false; // block the native synchronous submit; we submit manually above
+    }
+  </script>
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
 </html>

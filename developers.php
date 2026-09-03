@@ -522,7 +522,7 @@ body.sidebar-open .sidebar-backdrop {
         localStorage.setItem("notifSeenIds",JSON.stringify(seenIds));notifBadge.classList.remove("show");
       });
       loadNotifications();
-      setInterval(loadNotifications, 30000);
+      setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 
 function confirmLogout(e) {
   e.preventDefault();

@@ -311,9 +311,6 @@ body.sidebar-open .sidebar-backdrop {
       <button onclick="closeProfileModal();openAccountModal();" style="width:100%;margin-top:16px;padding:11px;background:var(--canvas);color:var(--text-primary);border:1px solid var(--border);border-radius:10px;font-size:.85rem;font-weight:700;font-family:var(--font);cursor:pointer;">
         ⚙ Account Settings
       </button>
-      <button onclick="confirmLogout(event)" style="width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;font-size:.85rem;font-weight:700;font-family:var(--font);cursor:pointer;">
-        Logout
-      </button>
     </div>
   </div>
 </div>
@@ -1596,6 +1593,7 @@ document.addEventListener('click', (e) => {
   });
 
   loadNotifications();
+  setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 
   // ════════════════════════════════════════════════════════════
   // MAP MODAL — OSRM only, zero routing panel
@@ -1849,5 +1847,6 @@ setTimeout(function () {
 
 <?php $chatbotApiPath = '../api/chatbot.php'; include __DIR__ . '/../includes/chatbot-widget.php'; ?>
 
+  <script src="../assets/js/ui-modals.js"></script>
 </body>
 </html>

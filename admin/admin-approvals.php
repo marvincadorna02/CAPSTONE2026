@@ -273,7 +273,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
       .notif-list { max-height:340px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
       .notif-list::-webkit-scrollbar { width:4px; }
       .notif-list::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
-      .notif-item { display:flex; align-items:flex-start; gap:10px; padding:11px 16px; border-bottom:1px solid #f8fafc; transition:background 0.15s ease; cursor:default; }
+      .notif-item { display:flex; align-items:flex-start; gap:10px; padding:11px 16px; border-bottom:1px solid #f8fafc; transition:background 0.15s ease; cursor:pointer; }
       .notif-item:last-child { border-bottom:none; }
       .notif-item:hover { background:#fafafa; }
       .notif-item.unread { background:#fffbeb; }
@@ -681,7 +681,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
 
       // ── Approve ───────────────────────────────────────────────
       async function approveShop(id, name, btn) {
-        if (!confirm(`Approve "${name}"? They will gain access to their shop dashboard.`)) return;
+        if (!(await customConfirm(`Approve "${name}"? They will gain access to their shop dashboard.`))) return;
         btn.disabled = true;
         btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:17px;height:17px;flex-shrink:0"><circle cx="12" cy="12" r="10" fill="white"/><polyline points="7,12 10.5,15.5 17,9" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Approving...`;
         const siblingReject = btn.nextElementSibling;
@@ -772,7 +772,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
 
       // ── Reconsider ────────────────────────────────────────────
       async function reconsiderShop(id, name, btn) {
-        if (!confirm(`Move "${name}" back to Pending for reconsideration?`)) return;
+        if (!(await customConfirm(`Move "${name}" back to Pending for reconsideration?`))) return;
         btn.disabled = true;
         btn.innerHTML = `<svg viewBox="0 0 24 24" style="width:12px;height:12px;flex-shrink:0"><circle cx="12" cy="12" r="10" fill="#1e40af"/><polyline points="12,7 12,12 15,15" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg> Moving...`;
         try {
@@ -841,6 +841,20 @@ $userInitials = strtoupper(substr($userName, 0, 2));
         return Math.floor(diff / 86400) + "d ago";
       }
 
+      function markOneNotifSeen(el) {
+        const id = el.dataset.id;
+        if (!id || seenIds.includes(id)) return;
+        seenIds.push(id);
+        localStorage.setItem("notifSeenIds", JSON.stringify(seenIds));
+        el.classList.remove("unread");
+        const dot = el.querySelector(".notif-unread-dot");
+        if (dot) dot.remove();
+        const current = parseInt(notifBadge.textContent, 10) || 0;
+        const next = current - 1;
+        if (next > 0) { notifBadge.textContent = next; }
+        else { notifBadge.classList.remove("show"); }
+      }
+
       function buildNotifId(ev) {
         return ev.type + "_" + ev.name + "_" + (ev.time || "");
       }
@@ -870,7 +884,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
             const cfg      = notifIconCfg[ev.type] || notifIconCfg.user;
             const label    = notifLabels[ev.type]  || "Activity";
             return `
-              <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${id}">
+              <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${id}" onclick="markOneNotifSeen(this)">
                 <div class="notif-dot-icon">${cfg.svg}</div>
                 <div class="notif-content">
                   <div class="notif-title">${label}</div>
@@ -914,7 +928,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
       });
 
       loadNotifications();
-      setInterval(loadNotifications, 30000);
+      setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 
       function confirmLogout(e) {
         e.preventDefault();
@@ -932,5 +946,6 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 </script>
-  </body>
+    <script src="../assets/js/ui-modals.js"></script>
+</body>
 </html>

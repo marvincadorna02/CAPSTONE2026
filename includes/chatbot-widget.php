@@ -295,7 +295,7 @@ if (!empty($_SESSION['user_id'])) {
   // ── Clear the saved conversation ──
   async function clearHistory() {
     if (sending || coolingDown) return;
-    if (!confirm('Clear this conversation? This cannot be undone.')) return;
+    if (!(await customConfirm('Clear this conversation? This cannot be undone.', { danger: true, confirmLabel: 'Clear' }))) return;
     try {
       await fetch(CHAT_API, {
         method: 'POST',

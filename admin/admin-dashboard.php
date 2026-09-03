@@ -282,7 +282,7 @@ if (window.top !== window.self) {
       .notif-item {
         display:flex; align-items:flex-start; gap:10px;
         padding:11px 16px; border-bottom:1px solid #f8fafc;
-        transition:background 0.15s ease; cursor:default;
+        transition:background 0.15s ease; cursor:pointer;
       }
       .notif-item:last-child { border-bottom:none; }
       .notif-item:hover { background:#fafafa; }
@@ -1117,6 +1117,21 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
         return ev.type + "_" + ev.name + "_" + (ev.time || "");
       }
 
+      // ── Mark ONE notification as seen, decrement badge by 1 ──────
+      function markOneNotifSeen(el) {
+        const id = el.dataset.id;
+        if (!id || seenIds.includes(id)) return;
+        seenIds.push(id);
+        localStorage.setItem("notifSeenIds", JSON.stringify(seenIds));
+        el.classList.remove("unread");
+        const dot = el.querySelector(".notif-unread-dot");
+        if (dot) dot.remove();
+        const current = parseInt(notifBadge.textContent, 10) || 0;
+        const next = current - 1;
+        if (next > 0) { notifBadge.textContent = next; }
+        else { notifBadge.classList.remove("show"); }
+      }
+
       async function loadNotifications() {
         try {
           const res  = await fetch("../api/get_dashboard_stats.php");
@@ -1144,7 +1159,7 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
             const cfg     = notifIconCfg[ev.type] || notifIconCfg.user;
             const label   = notifLabels[ev.type]  || "Activity";
             return `
-              <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${id}">
+              <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${id}" onclick="markOneNotifSeen(this)">
                 <div class="notif-dot-icon">${cfg.svg}</div>
                 <div class="notif-content">
                   <div class="notif-title">${label}</div>
@@ -1194,6 +1209,7 @@ setTimeout(() => renderTimelineChart(data.dailyRegistrations || []), 50);
 
       // Load badge count on page load
       loadNotifications();
+      setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 
       loadDashboard();
       setInterval(loadDashboard, 30000); // auto-refresh every 30s

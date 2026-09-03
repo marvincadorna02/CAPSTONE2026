@@ -464,9 +464,6 @@ $avatarUrl = $userProfilePic ?: ("https://ui-avatars.com/api/?name=" . urlencode
       <button onclick="closeProfileModal();openAccountModal();" style="width:100%;margin-top:16px;padding:11px;background:#f8fafc;color:#0f172a;border:1px solid #e2e8f0;border-radius:10px;font-size:.85rem;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;">
         ⚙ Account Settings
       </button>
-      <button onclick="confirmLogout(event)" style="width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;border-radius:10px;font-size:.85rem;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;">
-        Logout
-      </button>
     </div>
   </div>
 </div>
@@ -997,8 +994,10 @@ async function loadNotifications() {
     // Render list
     if (!data.notifications.length) {
       list.innerHTML = '<div class="notif-empty">No notifications yet.</div>';
+      window.__notifs = [];
       return;
     }
+    window.__notifs = data.notifications;
 
     const STATUS_MSG = {
   confirmed:    (shop, reply) => `<span>${shop}</span> confirmed your booking! 🎉`,
@@ -1011,7 +1010,7 @@ async function loadNotifications() {
   message:      (shop, reply) => `<span style="font-weight:800;color:#d97706;">${shop}</span> sent you a message 💬`,
 };
 
-list.innerHTML = data.notifications.map(n => {
+list.innerHTML = data.notifications.map((n, idx) => {
   const logo = n.shop_logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(n.shop_name||'Shop')}&background=f59e0b&color=fff&size=80`;
   const msg  = STATUS_MSG[n.status]
     ? STATUS_MSG[n.status](n.shop_name || 'Shop', n.reply || '')
@@ -1026,7 +1025,7 @@ list.innerHTML = data.notifications.map(n => {
     : '';
 
   return `
-    <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="window.location.href='${dest}'">
+    <div class="notif-item ${n.is_read ? '' : 'unread'}" onclick="handleNotifClick(${idx}, '${dest}')">
       <img src="${logo}" class="notif-logo" alt=""
         onerror="this.src='https://ui-avatars.com/api/?name=Shop&background=f59e0b&color=fff&size=80'" />
       <div class="notif-content">
@@ -1040,6 +1039,43 @@ list.innerHTML = data.notifications.map(n => {
   } catch(e) {
     console.error('Notif error:', e);
   }
+}
+
+// ── Mark ONE notification as read, decrement badge by 1, then navigate ──
+async function handleNotifClick(idx, dest) {
+  const n = (window.__notifs || [])[idx];
+  if (n && !n.is_read) {
+    let payload = null;
+    if (n.status === 'review_reply' && n.review_id) {
+      payload = { mark_one: true, type: 'review', review_id: n.review_id };
+    } else if (n.status === 'system' && n.notif_id) {
+      payload = { mark_one: true, type: 'system', notif_id: n.notif_id };
+    } else if (n.status === 'message') {
+      payload = null; // opening the thread marks its messages read server-side
+    } else if (n.booking_id && n.status) {
+      payload = { mark_one: true, type: 'booking', booking_id: n.booking_id, status: n.status };
+    }
+
+    if (payload) {
+      try {
+        await fetch('../api/get_notifications.php', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload)
+        });
+      } catch (e) { /* navigate anyway */ }
+    }
+
+    const badge = document.getElementById('notifBadge');
+    const current = parseInt(badge.textContent, 10) || 0;
+    const next = current - 1;
+    if (next > 0) {
+      badge.textContent = next;
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  window.location.href = dest;
 }
 
 function toggleNotifDropdown() {
@@ -1073,6 +1109,7 @@ document.addEventListener('click', (e) => {
 
 // Load badge count on page load
 loadNotifications();
+setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
     </script>
      <script>
 setTimeout(function () {
@@ -1201,5 +1238,6 @@ function showPicStatus(msg, ok) {
 </script>
 
 <?php $chatbotApiPath = '../api/chatbot.php'; include __DIR__ . '/../includes/chatbot-widget.php'; ?>
-  </body>
+    <script src="../assets/js/ui-modals.js"></script>
+</body>
 </html>

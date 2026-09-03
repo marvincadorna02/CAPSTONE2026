@@ -182,7 +182,7 @@ $userInitials = strtoupper(substr($userName, 0, 2));
       .notif-list { max-height:340px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#e2e8f0 transparent; }
       .notif-list::-webkit-scrollbar { width:4px; }
       .notif-list::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:4px; }
-      .notif-item { display:flex; align-items:flex-start; gap:10px; padding:11px 16px; border-bottom:1px solid #f8fafc; transition:background 0.15s ease; cursor:default; }
+      .notif-item { display:flex; align-items:flex-start; gap:10px; padding:11px 16px; border-bottom:1px solid #f8fafc; transition:background 0.15s ease; cursor:pointer; }
       .notif-item:last-child { border-bottom:none; }
       .notif-item:hover { background:#fafafa; }
       .notif-item.unread { background:#fffbeb; }
@@ -558,7 +558,7 @@ function updateStats(users) {
       });
 
       async function reactivateUser(id, btn) {
-        if (!confirm("Reactivate this user? They will regain full access.")) return;
+        if (!(await customConfirm("Reactivate this user? They will regain full access."))) return;
         btn.disabled=true;
         try {
           const res = await fetch("suspend_user.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id,action:"reactivate",csrf_token:"<?php echo $_SESSION['csrf_token']; ?>"})});
@@ -596,6 +596,19 @@ function updateStats(users) {
         if (s<86400) return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago";
       }
       function buildNotifId(ev) { return ev.type+"_"+ev.name+"_"+(ev.time||""); }
+      function markOneNotifSeen(el) {
+        const id = el.dataset.id;
+        if (!id || seenIds.includes(id)) return;
+        seenIds.push(id);
+        localStorage.setItem("notifSeenIds", JSON.stringify(seenIds));
+        el.classList.remove("unread");
+        const dot = el.querySelector(".notif-unread-dot");
+        if (dot) dot.remove();
+        const current = parseInt(notifBadge.textContent, 10) || 0;
+        const next = current - 1;
+        if (next > 0) { notifBadge.textContent = next; }
+        else { notifBadge.classList.remove("show"); }
+      }
       async function loadNotifications() {
         try {
           const res=await fetch("../api/get_dashboard_stats.php"); const data=await res.json();
@@ -607,7 +620,7 @@ function updateStats(users) {
           notifList.innerHTML=events.map(ev=>{
             const id=buildNotifId(ev);const isUnread=!seenIds.includes(id);
             const cfg=notifIconCfg[ev.type]||notifIconCfg.user;const label=notifLabels[ev.type]||"Activity";
-            return `<div class="notif-item ${isUnread?"unread":""}" data-id="${id}">
+            return `<div class="notif-item ${isUnread?"unread":""}" data-id="${id}" onclick="markOneNotifSeen(this)">
               <div class="notif-dot-icon">${cfg.svg}</div>
               <div class="notif-content"><div class="notif-title">${label}</div><div class="notif-name">${ev.name}</div><div class="notif-time">${notifTimeAgo(ev.time)}</div></div>
               ${isUnread?'<div class="notif-unread-dot"></div>':""}</div>`;
@@ -631,7 +644,7 @@ function updateStats(users) {
         localStorage.setItem("notifSeenIds",JSON.stringify(seenIds));notifBadge.classList.remove("show");
       });
       loadNotifications();
-      setInterval(loadNotifications, 30000);
+      setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
 
 function confirmLogout(e) {
   e.preventDefault();
@@ -649,5 +662,6 @@ setTimeout(function () {
     window.location.href = "../login.php?timeout=1";
 }, 1800000); // 30 minutes
 </script>
-  </body>
+    <script src="../assets/js/ui-modals.js"></script>
+</body>
 </html>
