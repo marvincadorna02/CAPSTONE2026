@@ -940,7 +940,7 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
 
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
-      btn.innerHTML = '<img src="book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Submitting...';
+      btn.innerHTML = '<img src="../assets/icons/book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Submitting...';
 
       try {
         const formData = new FormData(this);
@@ -950,7 +950,7 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
         try { data = JSON.parse(raw); } catch(e) {
           alert('Server error (not JSON):\n\n' + raw.substring(0, 500));
           btn.disabled = false;
-          btn.innerHTML = '<img src="book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
+         btn.innerHTML = '<img src="../assets/icons/book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
           return;
         }
         if (data.success) {
@@ -958,12 +958,12 @@ document.getElementById('deviceBrand').addEventListener('input', function() {
         } else {
           alert('Error: ' + (data.error || 'Something went wrong.'));
           btn.disabled = false;
-          btn.innerHTML = '<img src="book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
+          btn.innerHTML = '<img src="../assets/icons/book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
         }
       } catch(err) {
         alert('Fetch failed: ' + err.message);
         btn.disabled = false;
-        btn.innerHTML = '<img src="book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
+        btn.innerHTML = '<img src="../assets/icons/book.svg" width="16" height="16" style="vertical-align:middle;margin-right:6px;filter:brightness(0) invert(1);" /> Confirm Booking Request';
       }
     });
 

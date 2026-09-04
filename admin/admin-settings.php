@@ -570,7 +570,6 @@ $counts = $conn->query("SELECT
         e.target.submit();
       });
     });
-    });
   </script>
   <script src="../assets/js/ui-modals.js"></script>
 </body>

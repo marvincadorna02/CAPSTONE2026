@@ -56,6 +56,38 @@ $_SESSION['last_activity'] = time();
       <link rel="stylesheet" href="../assets/css/dashboard.css" />
       <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
       <style>
+
+        @media (max-width: 480px) {
+  .detail-modal-overlay {
+    padding: 10px;
+    align-items: flex-end;
+  }
+  .detail-modal-box {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .modal-banner {
+    flex-shrink: 0;
+    padding: 1rem 1.25rem .75rem;
+  }
+  .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 1rem 1.25rem 1.25rem;
+  }
+  .modal-footer {
+    flex-shrink: 0;
+    padding: 0 1.25rem 1rem;
+  }
+  .detail-grid {
+    gap: 6px;
+  }
+  .modal-section-title {
+    font-size: .64rem;
+  }
+}
 /* ── NOTIFICATIONS (matched to admin-dashboard.php, mobile-safe) ── */
 .notif-wrapper { position:relative; }
 .notif-badge {
@@ -508,6 +540,37 @@ body.sidebar-open .sidebar-backdrop {
   z-index: 950; /* mas taas kaysa backdrop (900) */
 }
 
+/* ── Reschedule modal: mobile height fix ── */
+@media (max-width: 480px) {
+  .reschedule-modal-overlay {
+    padding: 10px;
+    align-items: flex-end; /* anchor to bottom, feels more natural on small screens */
+  }
+  .reschedule-modal-box {
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .reschedule-modal-header {
+    padding: 1rem 1.25rem;
+    flex-shrink: 0;
+  }
+  .reschedule-modal-body {
+    padding: 1rem 1.25rem;
+    overflow-y: auto;   /* scrolls if content is taller than the box */
+    flex: 1;
+    min-height: 0;
+  }
+  .reschedule-policy-note {
+    padding: 8px 12px;
+    font-size: .72rem;
+  }
+  .reschedule-modal-footer {
+    padding: 0 1.25rem 1rem;
+    flex-shrink: 0;
+  }
+}
+
       </style>
     </head>
     <body class="role-customer">
@@ -634,8 +697,8 @@ body.sidebar-open .sidebar-backdrop {
       
 
       <!-- Booking Detail Modal -->
-      <div class="modal-overlay" id="detailModal">
-        <div class="modal-box">
+        <div class="detail-modal-overlay" id="detailModal">
+        <div class="detail-modal-box">
           <div class="modal-banner" id="modalBanner"></div>
           <div class="modal-body">
             <div id="modalStepper"></div>
@@ -1125,7 +1188,7 @@ document.getElementById('cancelModal').addEventListener('click', function(e) {
 
           // Fetch open days for this shop
           try {
-            const res  = await fetch(`get_shop_hours.php?shop_id=${shopId}`);
+            const res  = await fetch(`../api/get_shop_hours.php?shop_id=${shopId}`);
             const data = await res.json();
             shopOpenDays = data.open_days || [];
           } catch(e) {
