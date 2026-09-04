@@ -300,7 +300,7 @@ body.sidebar-open .sidebar-backdrop {
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--canvas);border-radius:10px;border:1px solid var(--border);">
-          <img src="../assets/icons/users.svg" width="16" height="16" alt="" style="opacity:.5;flex-shrink:0;" />
+          <img src="../assets/icons/solid.svg" width="23" height="23" alt="" style="opacity:.5;flex-shrink:0;" />
           <div>
             <div style="font-size:.65rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Account Type</div>
             <div style="font-size:.82rem;font-weight:600;color:var(--text-primary);" id="profileType"></div>
