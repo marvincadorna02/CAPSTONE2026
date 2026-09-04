@@ -204,6 +204,11 @@ while ($row = $result->fetch_assoc()) {
     $shops[] = $row;
 }
 
+// ── Remember which shops this customer actually saw in the listing ──
+if ($isCustomerMode) {
+    $_SESSION['visible_shop_ids'] = array_map('intval', array_column($shops, 'id'));
+}
+
 $conn->close();
 header('Content-Type: application/json');
 echo json_encode($shops);

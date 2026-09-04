@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id'])) { header("Location: ../login.php"); exit(); }
 if ($_SESSION['role'] !== 'customer') { header("Location: ../shop-owner/dashboard.php"); exit(); }
 
 $shopId   = (int)($_GET['id'] ?? 0);
-if (!$shopId) { header("../shop-owner/dashboard.php"); exit(); }
+if (!$shopId) { header("Location: ../shop-owner/dashboard.php"); exit(); }
 
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -36,7 +36,58 @@ $stmt->execute();
 $shop = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-if (!$shop) { header("../shop-owner/dashboard.php"); exit(); }
+if (!$shop) { header("Location: ../shop-owner/dashboard.php"); exit(); }
+
+// ── Authorization: only allow shops the customer actually reached
+//    via the listing, their favorites, or their booking history ──
+$conn->query("CREATE TABLE IF NOT EXISTS favorites (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    shop_id     INT NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_favorite (user_id, shop_id)
+)");
+$conn->query("CREATE TABLE IF NOT EXISTS bookings (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    shop_id          INT NOT NULL,
+    customer_id      INT NOT NULL,
+    service_id       INT DEFAULT NULL,
+    service_name     VARCHAR(255) DEFAULT '',
+    customer_name    VARCHAR(255) NOT NULL,
+    customer_contact VARCHAR(50)  NOT NULL,
+    device_type      VARCHAR(100) DEFAULT '',
+    device_brand     VARCHAR(150) DEFAULT '',
+    problem_description TEXT,
+    booking_date     DATE NOT NULL,
+    booking_time     TIME NOT NULL,
+    status           ENUM('pending','confirmed','completed','cancelled','no_show','paid','claimed') NOT NULL DEFAULT 'pending',
+    notes            TEXT DEFAULT NULL,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)");
+
+$allowed = in_array($shopId, $_SESSION['visible_shop_ids'] ?? [], true);
+
+if (!$allowed) {
+    $favCheck = $conn->prepare("SELECT id FROM favorites WHERE user_id = ? AND shop_id = ?");
+    $favCheck->bind_param("ii", $userId, $shopId);
+    $favCheck->execute();
+    $allowed = (bool)$favCheck->get_result()->fetch_assoc();
+    $favCheck->close();
+}
+
+if (!$allowed) {
+    $histCheck = $conn->prepare("SELECT id FROM bookings WHERE customer_id = ? AND shop_id = ? LIMIT 1");
+    $histCheck->bind_param("ii", $userId, $shopId);
+    $histCheck->execute();
+    $allowed = (bool)$histCheck->get_result()->fetch_assoc();
+    $histCheck->close();
+}
+
+if (!$allowed) {
+    $conn->close();
+    header("Location: ../shop-owner/dashboard.php");
+    exit();
+}
 
 // ── Fetch services ───────────────────────────────────────────
 $services = [];
