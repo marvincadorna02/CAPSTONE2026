@@ -1120,6 +1120,7 @@ document.addEventListener('click', (e) => {
 });
 loadNotifications();
 setInterval(loadNotifications, 15000); // poll every 15s so the bell stays live without a reload
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) loadNotifications(); }); // catch up immediately when the tab regains focus (bg tabs throttle setInterval)
 </script>
 <script>
 setTimeout(function () {

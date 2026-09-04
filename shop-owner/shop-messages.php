@@ -47,23 +47,10 @@ $userName = $_SESSION['name'];
     .threads-list, .chat-body { min-height: 0; }
 
     @media (max-width: 820px) {
-      .msgs-layout {
-        flex-direction: column;
-        height: calc(100dvh - 190px);
-        min-height: 0;
-        gap: 0;
-      }
-      .threads-col { width: 100%; height: 100%; max-height: none; border-radius: 18px; min-height: 0; }
-      .chat-col { width: 100%; height: 100%; display: none; min-height: 0; }
-      .msgs-layout.chat-open .threads-col { display: none; }
-      .msgs-layout.chat-open .chat-col { display: flex; }
-      .chat-back-btn { display: inline-flex !important; }
-      .threads-col-header { flex-wrap: wrap; row-gap: 6px; }
-      .new-msg-btn { margin-left: 0; }
-    }
-    @media (max-width: 480px) {
-      .modal-box { padding: 24px 18px; max-width: 92vw; }
-      .thread-last { max-width: 55vw; }
+      .msgs-layout { flex-direction: column; height: calc(100dvh - 190px); min-height: 0; gap: 10px; }
+      .threads-col { width: 100%; max-height: 280px; transition: max-height .25s ease, opacity .25s ease, margin .25s ease; }
+      .threads-col.collapsed { max-height: 0; margin: 0; }
+      .chat-col { flex: 1; height: auto; min-height: 0; }
     }
 
     /* ── LOGOUT MODAL ── */
@@ -196,6 +183,27 @@ $userName = $_SESSION['name'];
       font-size: .64rem; font-weight: 800; padding: 2px 7px; border-radius: 10px;
       margin-left: auto; box-shadow: 0 2px 6px rgba(245,158,11,0.4);
     }
+
+    /* ── Messenger-style collapse ── */
+    .threads-col {
+      transition: width .25s ease, opacity .25s ease, margin .25s ease;
+    }
+    .threads-col.collapsed {
+      width: 0; opacity: 0; margin-right: -18px;
+      overflow: hidden; pointer-events: none;
+    }
+    .threads-toggle-btn {
+      border: none; cursor: pointer; background: rgba(255,255,255,0.08);
+      color: #f1f5f9; width: 26px; height: 26px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; flex-shrink: 0; transition: background .15s ease;
+    }
+    .threads-toggle-btn:hover { background: rgba(255,255,255,0.15); }
+    .chat-col-header-toggle {
+      display: none; border: none; background: none; cursor: pointer;
+      font-size: 16px; color: #0f172a; margin-right: 4px;
+    }
+    .chat-col-header-toggle.show { display: inline-flex; }
 
     /* ── Chat column ── */
     .chat-col {
@@ -419,15 +427,16 @@ $userName = $_SESSION['name'];
         <div class="threads-col" id="threadsCol">
           <div class="threads-col-header">
             <span class="dot"></span> Conversations
+            <button class="threads-toggle-btn" onclick="toggleThreadsCol()" title="Hide list">‹</button>
             <button class="new-msg-btn" onclick="openNewMsgModal()">+ New</button>
           </div>
           <div class="threads-list" id="threadsList">
             <div class="thread-empty">Loading conversations…</div>
           </div>
         </div>
-                <div class="chat-col">
+        <div class="chat-col">
           <div class="chat-header" id="chatHeader">
-            <button class="chat-back-btn" id="chatBackBtn" type="button" aria-label="Back to conversations" style="display:none; background:none; border:none; font-size:18px; cursor:pointer; margin-right:4px; color:#0f172a;">←</button>
+            <button class="chat-col-header-toggle" id="chatColToggle" onclick="toggleThreadsCol()">☰</button>
             <span id="chatHeaderText">Select a conversation</span>
           </div>
           <div class="chat-body" id="chatBody">
@@ -560,6 +569,12 @@ function closeLogoutModal() {
       }
     }
 
+    function toggleThreadsCol() {
+      const col = document.getElementById('threadsCol');
+      const collapsed = col.classList.toggle('collapsed');
+      document.getElementById('chatColToggle').classList.toggle('show', collapsed);
+    }
+
     // ── New message: pick a customer ──────────────────────────
     let contactTimer = null;
 
@@ -628,7 +643,8 @@ function closeLogoutModal() {
       if (badge) badge.remove();
 
       document.getElementById('chatHeaderText').textContent = otherName;
-      document.querySelector('.msgs-layout').classList.add('chat-open');
+      document.getElementById('threadsCol').classList.add('collapsed');
+      document.getElementById('chatColToggle').classList.add('show');
       document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Loading…</div>';
       document.getElementById('chatInput').disabled = false;
       document.getElementById('chatSend').disabled = false;
@@ -739,10 +755,6 @@ function closeLogoutModal() {
     }
 
     document.getElementById('chatSend').addEventListener('click', sendChatMessage);
-        // ── Mobile: balik sa thread list gikan sa full-screen chat ──
-    document.getElementById('chatBackBtn').addEventListener('click', () => {
-      document.querySelector('.msgs-layout').classList.remove('chat-open');
-    });
     document.getElementById('chatInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
     });

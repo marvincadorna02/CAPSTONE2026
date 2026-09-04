@@ -196,6 +196,27 @@ html, body { height: 100%; overflow: hidden; }
       margin-left: auto; box-shadow: 0 2px 6px rgba(245,158,11,0.4);
     }
 
+    /* ── Messenger-style collapse ── */
+    .threads-col {
+      transition: width .25s ease, opacity .25s ease, margin .25s ease;
+    }
+    .threads-col.collapsed {
+      width: 0; opacity: 0; margin-right: -18px;
+      overflow: hidden; pointer-events: none;
+    }
+    .threads-toggle-btn {
+      border: none; cursor: pointer; background: rgba(255,255,255,0.08);
+      color: #f1f5f9; width: 26px; height: 26px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .8rem; flex-shrink: 0; transition: background .15s ease;
+    }
+    .threads-toggle-btn:hover { background: rgba(255,255,255,0.15); }
+    .chat-col-header-toggle {
+      display: none; border: none; background: none; cursor: pointer;
+      font-size: 16px; color: #0f172a; margin-right: 4px;
+    }
+    .chat-col-header-toggle.show { display: inline-flex; }
+
     /* ── Chat column ── */
     .chat-col {
       flex: 1;
@@ -278,9 +299,10 @@ html, body { height: 100%; overflow: hidden; }
     .chat-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .5; }
 
     @media (max-width: 820px) {
-      .msgs-layout { flex-direction: column; height: auto; }
-      .threads-col { width: 100%; max-height: 280px; }
-      .chat-col { height: 520px; }
+      .msgs-layout { flex-direction: column; height: calc(100dvh - 190px); min-height: 0; gap: 10px; }
+      .threads-col { width: 100%; max-height: 280px; transition: max-height .25s ease, opacity .25s ease, margin .25s ease; }
+      .threads-col.collapsed { max-height: 0; margin: 0; }
+      .chat-col { flex: 1; height: auto; min-height: 0; }
     }
 
     /* ── Sidebar backdrop (para ma-close pag click outside) ── */
@@ -406,6 +428,7 @@ html, body { height: 100%; overflow: hidden; }
         <div class="threads-col" id="threadsCol">
           <div class="threads-col-header">
             <span class="dot"></span> Conversations
+            <button class="threads-toggle-btn" onclick="toggleThreadsCol()" title="Hide list">‹</button>
             <button class="new-msg-btn" onclick="openNewMsgModal()">+ New</button>
           </div>
           <div class="threads-list" id="threadsList">
@@ -413,7 +436,10 @@ html, body { height: 100%; overflow: hidden; }
           </div>
         </div>
         <div class="chat-col">
-          <div class="chat-header" id="chatHeader">Select a conversation</div>
+          <div class="chat-header" id="chatHeader">
+            <button class="chat-col-header-toggle" id="chatColToggle" onclick="toggleThreadsCol()">☰</button>
+            <span id="chatHeaderText">Select a conversation</span>
+          </div>
           <div class="chat-body" id="chatBody">
             <div class="chat-placeholder">
               <img src="../assets/icons/reply.svg" alt="">
@@ -546,6 +572,12 @@ function updateOwnSeenIndicator(lastOwnId, isRead) {
       }
     }
 
+    function toggleThreadsCol() {
+      const col = document.getElementById('threadsCol');
+      const collapsed = col.classList.toggle('collapsed');
+      document.getElementById('chatColToggle').classList.toggle('show', collapsed);
+    }
+
     // ── New message: pick a repair shop ───────────────────────
     let contactTimer = null;
 
@@ -613,7 +645,9 @@ function updateOwnSeenIndicator(lastOwnId, isRead) {
       const badge = el?.querySelector('.thread-badge');
       if (badge) badge.remove();
 
-      document.getElementById('chatHeader').textContent = otherName;
+      document.getElementById('chatHeaderText').textContent = otherName;
+      document.getElementById('threadsCol').classList.add('collapsed');
+      document.getElementById('chatColToggle').classList.add('show');
       document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Loading…</div>';
       document.getElementById('chatInput').disabled = false;
       document.getElementById('chatSend').disabled = false;

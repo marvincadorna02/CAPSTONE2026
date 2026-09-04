@@ -12,6 +12,8 @@ if (isset($_SESSION['last_activity']) &&
 }
 $_SESSION['last_activity'] = time();
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
     echo json_encode(['error' => 'Unauthorized']); exit();
