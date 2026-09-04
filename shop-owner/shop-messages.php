@@ -31,6 +31,41 @@ $userName = $_SESSION['name'];
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <style>
 
+        /* ── Lock outer page, scroll ra sa sulod (threads-list / chat-body) ── */
+    html, body { height: 100%; overflow: hidden; }
+    .main-content {
+      height: 100vh; height: 100dvh;
+      overflow: hidden; display: flex; flex-direction: column;
+    }
+    .dashboard-content {
+      flex: 1; overflow: hidden;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .msgs-layout { min-height: 0; }
+    .dashboard-footer { flex-shrink: 0; }
+        .threads-col, .chat-col { min-height: 0; }
+    .threads-list, .chat-body { min-height: 0; }
+
+    @media (max-width: 820px) {
+      .msgs-layout {
+        flex-direction: column;
+        height: calc(100dvh - 190px);
+        min-height: 0;
+        gap: 0;
+      }
+      .threads-col { width: 100%; height: 100%; max-height: none; border-radius: 18px; min-height: 0; }
+      .chat-col { width: 100%; height: 100%; display: none; min-height: 0; }
+      .msgs-layout.chat-open .threads-col { display: none; }
+      .msgs-layout.chat-open .chat-col { display: flex; }
+      .chat-back-btn { display: inline-flex !important; }
+      .threads-col-header { flex-wrap: wrap; row-gap: 6px; }
+      .new-msg-btn { margin-left: 0; }
+    }
+    @media (max-width: 480px) {
+      .modal-box { padding: 24px 18px; max-width: 92vw; }
+      .thread-last { max-width: 55vw; }
+    }
+
     /* ── LOGOUT MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(10,15,30,0.72);
@@ -215,6 +250,16 @@ $userName = $_SESSION['name'];
       color: #0f172a; border-bottom-left-radius: 4px;
     }
 
+        .msg-col { display: flex; flex-direction: column; max-width: 100%; }
+    .msg-row.mine .msg-col   { align-items: flex-end; }
+    .msg-row.theirs .msg-col { align-items: flex-start; }
+    .msg-meta {
+      font-size: .66rem; color: #94a3b8; margin-top: 3px;
+      padding: 0 4px; display: flex; gap: 6px;
+    }
+    .msg-seen { color: #10b981; font-weight: 700; }
+    .msg-seen:empty { display: none; }
+
     .chat-footer {
       padding: 14px 16px; border-top: 1px solid #eef2f6;
       display: flex; gap: 10px; align-items: center;
@@ -242,12 +287,6 @@ $userName = $_SESSION['name'];
     .thread-empty { color: #64748b; }
     .thread-empty small { color: #475569; }
     .chat-empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .5; }
-
-    @media (max-width: 820px) {
-      .msgs-layout { flex-direction: column; height: auto; }
-      .threads-col { width: 100%; max-height: 280px; }
-      .chat-col { height: 520px; }
-    }
 
     /* ── Sidebar backdrop (para ma-close pag click outside) ── */
     .sidebar-backdrop {
@@ -386,8 +425,11 @@ $userName = $_SESSION['name'];
             <div class="thread-empty">Loading conversations…</div>
           </div>
         </div>
-        <div class="chat-col">
-          <div class="chat-header" id="chatHeader">Select a conversation</div>
+                <div class="chat-col">
+          <div class="chat-header" id="chatHeader">
+            <button class="chat-back-btn" id="chatBackBtn" type="button" aria-label="Back to conversations" style="display:none; background:none; border:none; font-size:18px; cursor:pointer; margin-right:4px; color:#0f172a;">←</button>
+            <span id="chatHeaderText">Select a conversation</span>
+          </div>
           <div class="chat-body" id="chatBody">
             <div class="chat-placeholder">
               <img src="../assets/icons/reply.svg" alt="">
@@ -456,15 +498,35 @@ function closeLogoutModal() {
     function fallbackAvatar(name) {
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || '?')}&background=2563eb&color=fff&size=64`;
     }
-    function bubbleHtml(text, mine) {
+        function formatTime(ts) {
+      if (!ts) return '';
+      const d = new Date(String(ts).replace(' ', 'T'));
+      if (isNaN(d)) return '';
+      let h = d.getHours(), m = d.getMinutes();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+    }
+
+    function bubbleHtml(text, mine, createdAt, id) {
       const name = mine ? myName : activeOtherName;
       const src  = (mine ? myAvatar : otherAvatar) || fallbackAvatar(name);
-      return `<div class="msg-row ${mine ? 'mine' : 'theirs'}">
+      const time = formatTime(createdAt);
+      return `<div class="msg-row ${mine ? 'mine' : 'theirs'}" data-msg-id="${id || ''}">
         <img class="msg-avatar" src="${src}" alt="" onerror="this.src='${fallbackAvatar(name)}'">
-        <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(text)}</div>
+        <div class="msg-col">
+          <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(text)}</div>
+          <div class="msg-meta">${time}${mine ? `<span class="msg-seen" id="msgSeen-${id || 'pending'}"></span>` : ''}</div>
+        </div>
       </div>`;
     }
 
+    function updateOwnSeenIndicator(lastOwnId, isRead) {
+      document.querySelectorAll('.msg-seen').forEach(el => el.textContent = '');
+      if (!lastOwnId) return;
+      const el = document.getElementById('msgSeen-' + lastOwnId);
+      if (el) el.textContent = isRead ? 'Seen' : 'Sent';
+    }
     async function loadThreads() {
       try {
         const res = await fetch('../api/messages.php', {
@@ -565,7 +627,8 @@ function closeLogoutModal() {
       const badge = el?.querySelector('.thread-badge');
       if (badge) badge.remove();
 
-      document.getElementById('chatHeader').textContent = otherName;
+      document.getElementById('chatHeaderText').textContent = otherName;
+      document.querySelector('.msgs-layout').classList.add('chat-open');
       document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Loading…</div>';
       document.getElementById('chatInput').disabled = false;
       document.getElementById('chatSend').disabled = false;
@@ -582,12 +645,18 @@ function closeLogoutModal() {
         if (!data.success) { bodyEl.innerHTML = '<div class="chat-empty">Could not load messages.</div>'; return; }
         otherAvatar = data.other_avatar || '';
         myAvatar    = data.my_avatar || '';
-        if (!data.messages.length) {
+                if (!data.messages.length) {
           bodyEl.innerHTML = '<div class="chat-empty">No messages yet.</div>';
         } else {
-          bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join('');
+          bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE, m.created_at, m.id)).join('');
           lastMsgId = data.messages[data.messages.length - 1].id;
           bodyEl.scrollTop = bodyEl.scrollHeight;
+
+          const ownMsgs = data.messages.filter(m => m.sender_role === MINE_ROLE);
+          if (ownMsgs.length) {
+            const last = ownMsgs[ownMsgs.length - 1];
+            updateOwnSeenIndicator(last.id, Number(last.is_read) === 1);
+          }
         }
       } catch (err) {
         document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Network error.</div>';
@@ -605,18 +674,24 @@ function closeLogoutModal() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'since', other_id: activeOtherId, after_id: lastMsgId })
         });
-        const data = await res.json();
-        if (!data.success || !data.messages.length) return;
+                const data = await res.json();
+        if (!data.success) return;
 
-        const bodyEl = document.getElementById('chatBody');
-        if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
-        const wasNearBottom = bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
+        if (data.messages.length) {
+          const bodyEl = document.getElementById('chatBody');
+          if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
+          const wasNearBottom = bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
 
-        bodyEl.insertAdjacentHTML('beforeend', data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join(''));
-        lastMsgId = data.messages[data.messages.length - 1].id;
+          bodyEl.insertAdjacentHTML('beforeend', data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE, m.created_at, m.id)).join(''));
+          lastMsgId = data.messages[data.messages.length - 1].id;
 
-        if (wasNearBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
-        loadThreads();
+          if (wasNearBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
+          loadThreads();
+        }
+
+        if (typeof data.last_own_id !== 'undefined') {
+          updateOwnSeenIndicator(data.last_own_id, data.last_own_read);
+        }
       } catch (err) {
         // silent fail, will retry next tick
       }
@@ -630,9 +705,9 @@ function closeLogoutModal() {
       sending = true;
       document.getElementById('chatSend').disabled = true;
 
-      const bodyEl = document.getElementById('chatBody');
+            const bodyEl = document.getElementById('chatBody');
       if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
-      bodyEl.insertAdjacentHTML('beforeend', bubbleHtml(text, true));
+      bodyEl.insertAdjacentHTML('beforeend', bubbleHtml(text, true, new Date().toISOString(), 'pending'));
       bodyEl.scrollTop = bodyEl.scrollHeight;
       input.value = '';
       input.style.height = 'auto';
@@ -647,7 +722,12 @@ function closeLogoutModal() {
         if (!data.success) {
           bodyEl.insertAdjacentHTML('beforeend', `<div class="chat-empty">${escHtml(data.message || 'Failed to send.')}</div>`);
         } else {
-          if (data.id) lastMsgId = Math.max(lastMsgId, Number(data.id));
+          if (data.id) {
+            lastMsgId = Math.max(lastMsgId, Number(data.id));
+            const row = bodyEl.querySelector('[data-msg-id="pending"]');
+            if (row) row.setAttribute('data-msg-id', data.id);
+            updateOwnSeenIndicator(data.id, false);
+          }
           loadThreads();
         }
       } catch (err) {
@@ -659,6 +739,10 @@ function closeLogoutModal() {
     }
 
     document.getElementById('chatSend').addEventListener('click', sendChatMessage);
+        // ── Mobile: balik sa thread list gikan sa full-screen chat ──
+    document.getElementById('chatBackBtn').addEventListener('click', () => {
+      document.querySelector('.msgs-layout').classList.remove('chat-open');
+    });
     document.getElementById('chatInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
     });

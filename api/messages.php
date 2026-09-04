@@ -231,10 +231,29 @@ if ($action === 'since') {
     $markStmt->execute();
     $markStmt->close();
 
+    // ── Live "Seen" status: check kung na-basa na ang akong last sent message ──
+    $mySenderRole = $myRole === 'customer' ? 'customer' : 'shop';
+    $lastOwnStmt = $conn->prepare(
+        "SELECT id, is_read FROM messages
+         WHERE shop_id = ? AND customer_id = ? AND sender_role = ?
+         ORDER BY id DESC LIMIT 1"
+    );
+    $lastOwnStmt->bind_param("iis", $shopId, $customerId, $mySenderRole);
+    $lastOwnStmt->execute();
+    $lastOwn = $lastOwnStmt->get_result()->fetch_assoc();
+    $lastOwnStmt->close();
+
     $conn->close();
-    echo json_encode(['success' => true, 'messages' => $msgs]);
+    echo json_encode([
+        'success'       => true,
+        'messages'      => $msgs,
+        'last_own_id'   => $lastOwn ? (int)$lastOwn['id'] : null,
+        'last_own_read' => $lastOwn ? (bool)$lastOwn['is_read'] : false,
+    ]);
     exit();
 }
+
+// ── CONTACTS
 
 // ── CONTACTS: customers this shop can start a new chat with ──
 if ($action === 'contacts') {

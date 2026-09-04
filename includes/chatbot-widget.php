@@ -424,20 +424,19 @@ if (!empty($_SESSION['user_id'])) {
   });
 
   // ── FAQ quick-reply chips: answer instantly, no AI call ──
-  const faqChipsEl = document.getElementById('fidFaqChips');
-  if (faqChipsEl) {
-    faqChipsEl.addEventListener('click', (e) => {
-      const btn = e.target.closest('.fid-faq-chip');
-      if (!btn || sending || coolingDown) return;
-      const faq = FAQS[+btn.dataset.faqIndex];
-      if (!faq) return;
-      addMessage(faq.q, 'user');
-      addMessage(faq.a, 'bot');
-      history.push({ role: 'user', content: faq.q });
-      history.push({ role: 'assistant', content: faq.a });
-      if (history.length > 10) history = history.slice(-10);
-      faqChipsEl.remove();
-    });
-  }
+  // Delegated on `body` (never replaced) instead of `fidFaqChips` (recreated on clear)
+  body.addEventListener('click', (e) => {
+    const btn = e.target.closest('.fid-faq-chip');
+    if (!btn || sending || coolingDown) return;
+    const faq = FAQS[+btn.dataset.faqIndex];
+    if (!faq) return;
+    addMessage(faq.q, 'user');
+    addMessage(faq.a, 'bot');
+    history.push({ role: 'user', content: faq.q });
+    history.push({ role: 'assistant', content: faq.a });
+    if (history.length > 10) history = history.slice(-10);
+    const chips = document.getElementById('fidFaqChips');
+    if (chips) chips.remove();
+  });
 })();
 </script>

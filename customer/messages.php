@@ -31,6 +31,40 @@ $userName = $_SESSION['name'];
   <link rel="stylesheet" href="../assets/css/dashboard-mobile-additions.css" />
   <style>
 
+    .msg-col { display: flex; flex-direction: column; max-width: 100%; }
+.msg-row.mine .msg-col   { align-items: flex-end; }
+.msg-row.theirs .msg-col { align-items: flex-start; }
+.msg-meta {
+  font-size: .66rem; color: #94a3b8; margin-top: 3px;
+  padding: 0 4px; display: flex; gap: 6px;
+}
+.msg-seen { color: #10b981; font-weight: 700; }
+.msg-seen:empty { display: none; }
+
+    /* ── Lock outer page, scroll ra sa sulod (threads-list / chat-body) ── */
+html, body { height: 100%; overflow: hidden; }
+
+.main-content {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.msgs-layout { min-height: 0; }
+.dashboard-footer { flex-shrink: 0; }
+
+/* ── Critical: flex children kinahanglan min-height:0 para mo-scroll internally imbes mo-grow ── */
+.threads-col, .chat-col { min-height: 0; }
+.threads-list, .chat-body { min-height: 0; }
+
     /* ── LOGOUT MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(10,15,30,0.72);
@@ -448,14 +482,36 @@ function closeLogoutModal() {
     function fallbackAvatar(name) {
       return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || '?')}&background=2563eb&color=fff&size=64`;
     }
-    function bubbleHtml(text, mine) {
-      const name = mine ? myName : activeOtherName;
-      const src  = (mine ? myAvatar : otherAvatar) || fallbackAvatar(name);
-      return `<div class="msg-row ${mine ? 'mine' : 'theirs'}">
-        <img class="msg-avatar" src="${src}" alt="" onerror="this.src='${fallbackAvatar(name)}'">
-        <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(text)}</div>
-      </div>`;
-    }
+    function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(String(ts).replace(' ', 'T'));
+  if (isNaN(d)) return '';
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function bubbleHtml(text, mine, createdAt, id) {
+  const name = mine ? myName : activeOtherName;
+  const src  = (mine ? myAvatar : otherAvatar) || fallbackAvatar(name);
+  const time = formatTime(createdAt);
+  return `<div class="msg-row ${mine ? 'mine' : 'theirs'}" data-msg-id="${id || ''}">
+    <img class="msg-avatar" src="${src}" alt="" onerror="this.src='${fallbackAvatar(name)}'">
+    <div class="msg-col">
+      <div class="msg-bubble ${mine ? 'mine' : 'theirs'}">${escHtml(text)}</div>
+      <div class="msg-meta">${time}${mine ? `<span class="msg-seen" id="msgSeen-${id || 'pending'}"></span>` : ''}</div>
+    </div>
+  </div>`;
+}
+
+// ── Update the "Sent"/"Seen" label — usa ra ka bubble ang naay label, ang pinaka-bag-o nako gipadala ──
+function updateOwnSeenIndicator(lastOwnId, isRead) {
+  document.querySelectorAll('.msg-seen').forEach(el => el.textContent = '');
+  if (!lastOwnId) return;
+  const el = document.getElementById('msgSeen-' + lastOwnId);
+  if (el) el.textContent = isRead ? 'Seen' : 'Sent';
+}
 
     async function loadThreads() {
       try {
@@ -574,12 +630,18 @@ function closeLogoutModal() {
         if (!data.success) { bodyEl.innerHTML = '<div class="chat-empty">Could not load messages.</div>'; return; }
         otherAvatar = data.other_avatar || '';
         myAvatar    = data.my_avatar || '';
-        if (!data.messages.length) {
+                if (!data.messages.length) {
           bodyEl.innerHTML = '<div class="chat-empty">No messages yet.</div>';
         } else {
-          bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join('');
+          bodyEl.innerHTML = data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE, m.created_at, m.id)).join('');
           lastMsgId = data.messages[data.messages.length - 1].id;
           bodyEl.scrollTop = bodyEl.scrollHeight;
+
+          const ownMsgs = data.messages.filter(m => m.sender_role === MINE_ROLE);
+          if (ownMsgs.length) {
+            const last = ownMsgs[ownMsgs.length - 1];
+            updateOwnSeenIndicator(last.id, Number(last.is_read) === 1);
+          }
         }
       } catch (err) {
         document.getElementById('chatBody').innerHTML = '<div class="chat-empty">Network error.</div>';
@@ -598,17 +660,23 @@ function closeLogoutModal() {
           body: JSON.stringify({ action: 'since', other_id: activeOtherId, after_id: lastMsgId })
         });
         const data = await res.json();
-        if (!data.success || !data.messages.length) return;
+                if (!data.success) return;
 
-        const bodyEl = document.getElementById('chatBody');
-        if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
-        const wasNearBottom = bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
+        if (data.messages.length) {
+          const bodyEl = document.getElementById('chatBody');
+          if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
+          const wasNearBottom = bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 80;
 
-        bodyEl.insertAdjacentHTML('beforeend', data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE)).join(''));
-        lastMsgId = data.messages[data.messages.length - 1].id;
+          bodyEl.insertAdjacentHTML('beforeend', data.messages.map(m => bubbleHtml(m.message, m.sender_role === MINE_ROLE, m.created_at, m.id)).join(''));
+          lastMsgId = data.messages[data.messages.length - 1].id;
 
-        if (wasNearBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
-        loadThreads();
+          if (wasNearBottom) bodyEl.scrollTop = bodyEl.scrollHeight;
+          loadThreads();
+        }
+
+        if (typeof data.last_own_id !== 'undefined') {
+          updateOwnSeenIndicator(data.last_own_id, data.last_own_read);
+        }
       } catch (err) {
         // silent fail, will retry next tick
       }
@@ -622,9 +690,9 @@ function closeLogoutModal() {
       sending = true;
       document.getElementById('chatSend').disabled = true;
 
-      const bodyEl = document.getElementById('chatBody');
+            const bodyEl = document.getElementById('chatBody');
       if (bodyEl.querySelector('.chat-empty')) bodyEl.innerHTML = '';
-      bodyEl.insertAdjacentHTML('beforeend', bubbleHtml(text, true));
+      bodyEl.insertAdjacentHTML('beforeend', bubbleHtml(text, true, new Date().toISOString(), 'pending'));
       bodyEl.scrollTop = bodyEl.scrollHeight;
       input.value = '';
       input.style.height = 'auto';
@@ -639,7 +707,12 @@ function closeLogoutModal() {
         if (!data.success) {
           bodyEl.insertAdjacentHTML('beforeend', `<div class="chat-empty">${escHtml(data.message || 'Failed to send.')}</div>`);
         } else {
-          if (data.id) lastMsgId = Math.max(lastMsgId, Number(data.id));
+          if (data.id) {
+            lastMsgId = Math.max(lastMsgId, Number(data.id));
+            const row = bodyEl.querySelector('[data-msg-id="pending"]');
+            if (row) row.setAttribute('data-msg-id', data.id);
+            updateOwnSeenIndicator(data.id, false); // "Sent" una, mo-"Seen" ra pag na-poll na na-basa
+          }
           loadThreads();
         }
       } catch (err) {
